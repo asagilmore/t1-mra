@@ -50,23 +50,23 @@ class T1w2MraDataset(Dataset):
     def __getitem__(self, idx):
 
 
-    def _get_id_dict(self):
+    def _get_id_list(self):
 
         ids = get_matched_ids([self.mri_dir, self.mra_dir],
                               split_char=self.split_char)
-        id_dict = {}
+        id_list = []
 
         for id in ids:
             matching_mri = [path for path in self.mri_paths if id in path]
             matching_mra = [path for path in self.mra_paths if id in path]
             if len(matching_mri) == 1 and len(matching_mra) == 1:
-                id_dict[id] = {"mri_path": matching_mri[0],
+                id_list[id] = {"mri_path": matching_mri[0],
                                "mra_path": matching_mra[0]}
             else:
                 raise ValueError(f"ID {id} has {len(matching_mri)} MRI images "
                                  f"and {len(matching_mra)} MRA images. There "
                                  f"should be exactly one of each.")
-        return id_dict
+        return id_list
 
     def _get_num_slices(self, filepath):
         '''
