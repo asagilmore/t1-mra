@@ -48,20 +48,40 @@ class T1w2MraDataset(Dataset):
         return samples * slices
 
     def __getitem__(self, idx):
+        list_length = len(self.id_list)
+        for i in range(list_length):
+            real_idx = self.id_list[i].get("total_slices")
+            real_high_idx = self.id_list[i - 1].get("total_slices") if i > 0 else None
 
+            # Check if idx is within the current range
+            if (real_high_idx is None or idx >= real_idx) and (i == list_length - 1 or idx < self.id_list[i + 1].get("total_slices")):
+                mri_path = self.id_list[i].get("mri_path")
+                mra_path = self.id_list[i].get("mra_path")
+                my_mri = nib.load(mri_path).get_fdata()
+                my_mra = nib.load(mra_path).get_fdata()
+                slice_idx = idx - real_idx
+                mri_slice = my_mri[:, :, slice_idx]
+                mra_slice = my_mra[:, :, slice_idx]
+                return mri_slice, mra_slice
+
+            # If no suitable range is found, return empty slices or handle accordingly
+            return [], []
 
     def _get_id_list(self):
 
         ids = get_matched_ids([self.mri_dir, self.mra_dir],
                               split_char=self.split_char)
         id_list = []
-
+        slices = 0
         for id in ids:
             matching_mri = [path for path in self.mri_paths if id in path]
             matching_mra = [path for path in self.mra_paths if id in path]
+        
             if len(matching_mri) == 1 and len(matching_mra) == 1:
                 id_list[id] = {"mri_path": matching_mri[0],
-                               "mra_path": matching_mra[0]}
+                               "mra_path": matching_mra[0],
+                               "total_slices": slices}
+                slices += self._get_num_slices(matching_mri[0])
             else:
                 raise ValueError(f"ID {id} has {len(matching_mri)} MRI images "
                                  f"and {len(matching_mra)} MRA images. There "
