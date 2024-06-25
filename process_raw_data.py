@@ -36,14 +36,10 @@ def process_data(T1_dir, MRA_dir, T1_out_dir, MRA_out_dir):
             T1_img = nib.load(os.path.join(T1_dir, T1_file))
             MRA_img = nib.load(os.path.join(MRA_dir, MRA_file))
 
-            print(f"t1w shape: {T1_img.shape}")
-            print(f"mra shape: {MRA_img.shape}")
             ## upsample mra to t1w resolution
             T1W_resampled = resample_from_to(T1_img, MRA_img,mode='nearest')
 
             mra_mask = MRA_img.get_fdata() > 0
-            print(f"T1W resamp shape: {T1W_resampled.shape}")
-            print(f"mra mask shape: {mra_mask.shape}")
 
             nib.save(T1W_resampled, os.path.join(T1_out_dir, f"{id}-T1W-resampled.nii.gz"))
             nib.save(MRA_img, os.path.join(MRA_out_dir, f"{id}-MRA.nii.gz"))
