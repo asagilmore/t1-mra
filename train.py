@@ -3,14 +3,14 @@ import torchvision.transforms as transforms
 from T1mra_dataset import T1w2MraDataset
 from UNet import UNet
 import torch.optim as optim
+from torch.nn import CrossEntropyLoss
 
-# train_transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     transforms.Normalize(mean=[0.5], std=[0.5])
-# ])
+train_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.5], std=[0.5])
+])
 
-train_transform = transforms.ToTensor()
-
+criterion = CrossEntropyLoss()
 
 dataset = T1w2MraDataset("/Users/asagilmore/src/t1-mra/processed-data/T1W",
                          "/Users/asagilmore/src/t1-mra/processed-data/MRA",
