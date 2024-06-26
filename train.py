@@ -18,17 +18,17 @@ if __name__ == "__main__":
 
     # Get training args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, required=True, help="Directory containing training data"
+    parser.add_argument("--data-dir", type=str, required=True, help="Directory containing training data"
                                                                     "should have train, valid, test subdirectories")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
-    parser.add_argument("--num_epochs", type=int, default=500, help="Number of epochs")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--num-epochs", type=int, default=500, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     args = parser.parse_args()
 
 
     # Check device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")cd
+    print(f"Using device: {device}")
 
     # setup perceptual loss
     feature_extractor = VGG16FeatureExtractor()
@@ -85,4 +85,9 @@ if __name__ == "__main__":
             running_loss += loss.item()
         print(f"Epoch {epoch+1}, Loss: {running_loss/len(dataloader)}")
 
-        torch.
+        # save model checkpoint
+        torch.save({
+            'epoch': epoch+1,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict()
+        }, "model_checkpoint.pth")
