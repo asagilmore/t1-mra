@@ -13,18 +13,48 @@ from UNet import UNet
 from PerceptualLoss import VGG16FeatureExtractor, PerceptualLoss
 
 
+def train(model, loader, criterion, optimizer, device):
+    model.train()
+    running_loss = 0.0
+    for images, masks in loader:
+        images, masks = images.to(device).float(), masks.to(device).float()
+        optimizer.zero_grad()
+        outputs = model(images)
+        loss = criterion(outputs, masks)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+    return running_loss/len(loader)
+
+
+def validate(model, loader, criterion, device):
+    model.eval()
+    val_loss = 0.0
+    correct = 0
+    with torch.no_grad():
+        for inputs, labels in loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            val_loss += loss.item()
+            preds = torch.argmax(outputs, dim=1)
+            correct += (preds == labels).sum().item()
+    return val_loss / len(loader), correct / len(loader.dataset)
+
 
 if __name__ == "__main__":
 
     # Get training args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir", type=str, required=True, help="Directory containing training data"
+    parser.add_argument("--data_dir", type=str, required=True, help="Directory containing training data"
                                                                     "should have train, valid, test subdirectories")
-    parser.add_argument("--batch-size", type=int, default=32, help="Batch size for training")
-    parser.add_argument("--num-epochs", type=int, default=500, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--num_epochs", type=int, default=500, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     args = parser.parse_args()
 
+    logging.basicConfig(filename='training.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
     # Check device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,11 +73,11 @@ if __name__ == "__main__":
 
 
     # def datasets/dataloaders
-    train_dataset = T1w2MraDataset(os.path.join(args.train_dir, "train", "T1W"),
-                                   os.path.join(args.train_dir, "train", "MRA"),
+    train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
+                                   os.path.join(args.data_dir, "train", "MRA"),
                                    transform=train_transform)
-    valid_dataset = T1w2MraDataset(os.path.join(args.valid_dir, "valid", "T1W"),
-                                   os.path.join(args.valid_dir, "valid", "MRA"),
+    valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
+                                   os.path.join(args.data_dir, "valid", "MRA"),
                                    transform=train_transform)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
@@ -72,19 +102,11 @@ if __name__ == "__main__":
 
     # training loop
     for epoch in range(start_epoch, num_epochs):
-        model.train()
-        running_loss = 0.0
-        for images, masks in dataloader:
-            images, masks = images.to(device).float(), masks.to(device).float()
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = perceptual_loss.get_loss(outputs, masks)
-            loss.backward()
-            optimizer.step()
+        train_loss = train(model, train_dataloader, perceptual_loss, optimizer, device)
+        val_loss, val_acc = validate(model, valid_dataloader, perceptual_loss, device)
 
-            running_loss += loss.item()
-        print(f"Epoch {epoch+1}, Loss: {running_loss/len(dataloader)}")
-
+        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, Val Acc: {val_acc}")
+        logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, Val Acc: {val_acc}")
         # save model checkpoint
         torch.save({
             'epoch': epoch+1,
