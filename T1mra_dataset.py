@@ -43,33 +43,41 @@ class T1w2MraDataset(Dataset):
         return self.id_list[-1].get("total_running_slices")
 
     def __getitem__(self, idx):
-        length = len(self)
-        file_idx = idx // self.id_list[0].get("total_running_slices")
-        while True:
-            slice_idx = self.id_list[file_idx].get("total_running_slices")
-            slice_low_idx = self.id_list[file_idx - 1].get("total_running_slices") if file_idx > 0 else 0
+        # start at best guess for file index
+        file_index = idx // self.id_list[0].get("total_running_slices")
 
-            # Check if idx is within the current range
-            if (slice_low_idx is None or idx >= slice_low_idx) and (idx <= slice_idx):
-                mri_path = self.id_list[file_idx].get("mri_path")
-                mra_path = self.id_list[file_idx].get("mra_path")
-                my_mri = nib.load(mri_path).get_fdata()
-                my_mra = nib.load(mra_path).get_fdata()
-                slice_idx = idx - slice_low_idx
-                mri_slice = my_mri[:, :, slice_idx]
-                mra_slice = my_mra[:, :, slice_idx]
-
-                mri_slice = self.transform(mri_slice)
-                mra_slice = self.transform(mra_slice)
-
-                return mri_slice, mra_slice
-            # Go to next or previous file index
-            elif (idx < slice_low_idx and idx >= 0):
-                file_idx -= 1
-            elif (idx >= slice_idx and idx < length):
-                file_idx += 1
+        while file_index <= len(self):
+            running_slices_at_file = self.id_list[file_index].get("total_running_slices")
+            if running_slices_at_file > idx:
+                # if we overshot, go back
+                file_index -= 1
             else:
-                raise IndexError("Index out of range")
+                # check if current file contains slice
+                last_file_end = self.id_list[file_index - 1].get("total_running_slices")
+                if last_file_end <= idx:
+                    # we undershot, go forward
+                    file_index += 1
+                else:
+                    # we found the right file
+                    return self._get_slices(file_index, last_file_end + idx)
+
+        raise IndexError("Index out of range, could not find slice")
+
+    def _get_slices(self, file_idx, slice_idx):
+        file = self.id_list[file_idx]
+        mri_path = file.get("mri_path")
+        mra_path = file.get("mra_path")
+
+        mri_mmap = nib.load(mri_path, mmap=True)
+        mra_mmap = nib.load(mra_path, mmap=True)
+
+        mri_slice = mri_mmap.dataobj[:, :, slice_idx]
+        mra_slice = mra_mmap.dataobj[:, :, slice_idx]
+
+        mri_slice = self.transform(mri_slice)
+        mra_slice = self.transform(mra_slice)
+
+        return mri_slice, mra_slice
 
     def _get_id_list(self):
 
