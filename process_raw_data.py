@@ -3,8 +3,10 @@ import os
 import nibabel as nib
 from nibabel.processing import resample_from_to
 from tqdm import tqdm
+import logging
 import argparse
 
+logging.basicConfig(filename='process_data_errors.log', level=logging.ERROR, format='%(asctime)s:%(levelname)s:%(message)s')
 
 def get_matched_ids(dirs, split_char="-"):
     '''
@@ -26,23 +28,27 @@ def process_data(T1_dir, MRA_dir, T1_out_dir, MRA_out_dir):
     matched_ids = get_matched_ids([T1_dir, MRA_dir])
 
     for id in tqdm(matched_ids):
-        T1_file = [file for file in T1_files if file.startswith(id)]
-        MRA_file = [file for file in MRA_files if file.startswith(id)]
+        try:
+            T1_file = [file for file in T1_files if file.startswith(id)]
+            MRA_file = [file for file in MRA_files if file.startswith(id)]
 
-        if len(T1_file) == 1 and len(MRA_file) == 1:
-            T1_file = T1_file[0]
-            MRA_file = MRA_file[0]
+            if len(T1_file) == 1 and len(MRA_file) == 1:
+                T1_file = T1_file[0]
+                MRA_file = MRA_file[0]
 
-            T1_img = nib.load(os.path.join(T1_dir, T1_file))
-            MRA_img = nib.load(os.path.join(MRA_dir, MRA_file))
+                T1_img = nib.load(os.path.join(T1_dir, T1_file))
+                MRA_img = nib.load(os.path.join(MRA_dir, MRA_file))
 
-            ## upsample mra to t1w resolution
-            T1W_resampled = resample_from_to(T1_img, MRA_img,mode='nearest')
+                # Upsample MRA to T1W resolution
+                T1W_resampled = resample_from_to(T1_img, MRA_img, mode='nearest')
 
-            mra_mask = MRA_img.get_fdata() > 0
+                mra_mask = MRA_img.get_fdata() > 0
 
-            nib.save(T1W_resampled, os.path.join(T1_out_dir, f"{id}-T1W-resampled.nii.gz"))
-            nib.save(MRA_img, os.path.join(MRA_out_dir, f"{id}-MRA.nii.gz"))
+                nib.save(T1W_resampled, os.path.join(T1_out_dir, f"{id}-T1W-resampled.nii.gz"))
+                nib.save(MRA_img, os.path.join(MRA_out_dir, f"{id}-MRA.nii.gz"))
+
+        except Exception as e:
+            logging.error(f"Error processing ID {id}: {e}")
 
 
 if __name__ == "__main__":
