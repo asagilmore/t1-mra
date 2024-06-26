@@ -30,9 +30,9 @@ def split_data(valid_percent, test_percent, mra_dir, t1_dir, outdir):
 
     # Calculate number of files for each set
     total_ids = get_matched_ids([mra_dir, t1_dir])
-    valid_count = int(total_ids * valid_percent / 100)
-    test_count = int(total_ids * test_percent / 100)
-    train_count = total_ids - (valid_count + test_count)
+    valid_count = int(len(total_ids) * valid_percent)
+    test_count = int(len(total_ids) * test_percent)
+    train_count = len(total_ids) - (valid_count + test_count)
 
     # Randomly select files for each set
     valid_ids = sample(total_ids, valid_count)
@@ -56,7 +56,6 @@ def split_data(valid_percent, test_percent, mra_dir, t1_dir, outdir):
         for mra_file, t1_file in zip(mra_to_copy, t1_to_copy):
             shutil.copy(mra_file, mra_out_dir)
             shutil.copy(t1_file, t1_out_dir)
-d
     for id in train_ids:
         mra_to_copy = [get_filepath_from_id(mra_dir, id) for id in train_ids]
         t1_to_copy = [get_filepath_from_id(t1_dir, id) for id in train_ids]
