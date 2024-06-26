@@ -52,8 +52,17 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
     parser.add_argument("--num_epochs", type=int, default=500, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--patience", type=int, default=10, help="Number of epochs to wait for improvement before stopping")
+    parser.add_argument("--min_delta", type=float, default=0.001, help="Minimum change to qualify as an improvement")
     args = parser.parse_args()
 
+    # Early stopping parameters
+    patience = args.patience
+    min_delta = args.min_delta
+    best_val_loss = float('inf')
+    epochs_no_improve = 0
+
+    # logging
     logging.basicConfig(filename='training.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
     # Check device
@@ -108,8 +117,19 @@ if __name__ == "__main__":
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, Val Acc: {val_acc}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, Val Acc: {val_acc}")
         # save model checkpoint
-        torch.save({
-            'epoch': epoch+1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict()
-        }, "model_checkpoint.pth")
+        if best_val_loss - val_loss > min_delta:
+            best_val_loss = val_loss
+            epochs_no_improve = 0
+
+            torch.save({
+                'epoch': epoch+1,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()
+            }, "model_checkpoint.pth")
+        else:
+            epochs_no_improve += 1
+
+        if epochs_no_improve == patience:
+            print("Early stopping")
+            logging.info("Early stopping at epoch {epoch+1}")
+            break
