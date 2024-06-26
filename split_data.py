@@ -3,6 +3,7 @@ import os
 import shutil
 from random import sample
 from misc_utils import get_matched_ids, get_filepath_from_id
+from tqdm import tqdm
 
 
 def parse_args():
@@ -39,7 +40,8 @@ def split_data(valid_percent, test_percent, mra_dir, t1_dir, outdir):
     test_ids = sample(list(set(total_ids) - set(valid_ids)), test_count)
     train_ids = list(set(total_ids) - set(valid_ids) - set(test_ids))
 
-    for id in valid_ids:
+    print("moving valid files...")
+    for id in tqdm(valid_ids):
         mra_to_copy = [get_filepath_from_id(mra_dir, id) for id in valid_ids]
         t1_to_copy = [get_filepath_from_id(t1_dir, id) for id in valid_ids]
         mra_out_dir = os.path.join(outdir, "valid","MRA")
@@ -48,7 +50,8 @@ def split_data(valid_percent, test_percent, mra_dir, t1_dir, outdir):
             shutil.copy(mra_file, mra_out_dir)
             shutil.copy(t1_file, t1_out_dir)
 
-    for id in test_ids:
+    print("moving test files...")
+    for id in tqdm(test_ids):
         mra_to_copy = [get_filepath_from_id(mra_dir, id) for id in test_ids]
         t1_to_copy = [get_filepath_from_id(t1_dir, id) for id in test_ids]
         mra_out_dir = os.path.join(outdir, "test","MRA")
@@ -56,7 +59,9 @@ def split_data(valid_percent, test_percent, mra_dir, t1_dir, outdir):
         for mra_file, t1_file in zip(mra_to_copy, t1_to_copy):
             shutil.copy(mra_file, mra_out_dir)
             shutil.copy(t1_file, t1_out_dir)
-    for id in train_ids:
+
+    print("moving train files...")
+    for id in tqdm(train_ids):
         mra_to_copy = [get_filepath_from_id(mra_dir, id) for id in train_ids]
         t1_to_copy = [get_filepath_from_id(t1_dir, id) for id in train_ids]
         mra_out_dir = os.path.join(outdir, "train","MRA")
