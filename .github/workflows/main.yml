@@ -33,4 +33,6 @@ jobs:
       continue-on-error: true
 
     - name: Run tests
-      run: pytest
+      env:
+        PYTHONPATH: ${{ github.workspace }}/T1Mra
+      run: pytest tests/
