@@ -1,4 +1,7 @@
-from T1Mra.misc_utils import get_matched_ids, get_filepath_from_id
+import sys
+# kinda hacky way to fix this but wte
+sys.path.append('../')  # noqa: E402
+from T1Mra.misc_utils import get_matched_ids, get_filepath_from_id  # noqa: E402, E501
 
 
 def test_get_matched_ids():

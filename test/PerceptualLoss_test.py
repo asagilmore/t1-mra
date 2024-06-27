@@ -1,7 +1,10 @@
-from T1Mra import PerceptualLoss, VGG16FeatureExtractor
-import torch
-from torch.nn import MSELoss
-import pytest
+import sys
+# kinda hacky way to fix this but wte
+sys.path.append('../')  # noqa: E402
+from T1Mra import PerceptualLoss, VGG16FeatureExtractor  # noqa: E402
+import torch  # noqa: E402
+from torch.nn import MSELoss  # noqa: E402
+import pytest  # noqa: E402
 
 
 @pytest.fixture

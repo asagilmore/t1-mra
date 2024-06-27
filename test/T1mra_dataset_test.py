@@ -1,5 +1,8 @@
-from T1Mra import T1w2MraDataset
-from torchvision import transforms
+import sys
+# kinda hacky way to fix this but wte
+sys.path.append('../')  # noqa: E402
+from T1Mra import T1w2MraDataset  # noqa: E402
+from torchvision import transforms  # noqa: E402
 
 
 def test_T1w2MraDataset():
@@ -26,3 +29,4 @@ def test_T1w2MraDataset():
     mri, mra = test_dataset[0]
     assert mri.shape == mra.shape
     assert mri.shape == (512, 512)
+
