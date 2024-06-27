@@ -1,6 +1,5 @@
 from torch.utils.data import Dataset
 import nibabel as nib
-import numpy as np
 from misc_utils import get_matched_ids
 import os
 
@@ -47,13 +46,15 @@ class T1w2MraDataset(Dataset):
         file_index = idx // self.id_list[0].get("total_running_slices")
 
         while file_index <= len(self):
-            running_slices_at_file = self.id_list[file_index].get("total_running_slices")
+            running_slices_at_file = self.id_list[file_index].get(
+                                           "total_running_slices")
             if running_slices_at_file > idx:
                 # if we overshot, go back
                 file_index -= 1
             else:
                 # check if current file contains slice
-                last_file_end = self.id_list[file_index - 1].get("total_running_slices")
+                last_file_end = self.id_list[file_index - 1].get(
+                                          "total_running_slices")
                 if last_file_end <= idx:
                     # we undershot, go forward
                     file_index += 1

@@ -44,13 +44,18 @@ if __name__ == "__main__":
 
     # Get training args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=str, required=True, help="Directory containing training data"
-                                                                    "should have train, valid, test subdirectories")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
-    parser.add_argument("--num_epochs", type=int, default=500, help="Number of epochs")
+    parser.add_argument("--data_dir", type=str, required=True, help="Dir "
+                        "containing training data. "
+                        "Should have train, valid, test subdirectories")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch"
+                        "size for training")
+    parser.add_argument("--num_epochs", type=int, default=500, help="Number "
+                        "of epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
-    parser.add_argument("--patience", type=int, default=10, help="Number of epochs to wait for improvement before stopping")
-    parser.add_argument("--min_delta", type=float, default=0.001, help="Minimum change to qualify as an improvement")
+    parser.add_argument("--patience", type=int, default=10, help="Number "
+                        "of epochs to wait for improvement before stopping")
+    parser.add_argument("--min_delta", type=float, default=0.001,
+                        help="Minimum change to qualify as an improvement")
     args = parser.parse_args()
 
     # Early stopping parameters
@@ -60,7 +65,8 @@ if __name__ == "__main__":
     epochs_no_improve = 0
 
     # logging
-    logging.basicConfig(filename='training.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+    logging.basicConfig(filename='training.log', level=logging.INFO,
+                        format='%(asctime)s:%(levelname)s:%(message)s')
 
     # Check device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -86,8 +92,10 @@ if __name__ == "__main__":
                                    os.path.join(args.data_dir, "valid", "MRA"),
                                    transform=train_transform)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
+                                  shuffle=True)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size,
+                                  shuffle=False)
 
     # def model
     model = UNet(1, 1)
@@ -108,11 +116,16 @@ if __name__ == "__main__":
 
     # training loop
     for epoch in range(start_epoch, num_epochs):
-        train_loss = train(model, train_dataloader, perceptual_loss, optimizer, device)
-        val_loss, val_acc = validate(model, valid_dataloader, perceptual_loss, device)
+        train_loss = train(model, train_dataloader, perceptual_loss,
+                           optimizer, device)
+        val_loss, val_acc = validate(model, valid_dataloader, perceptual_loss,
+                                     device)
 
-        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, Val Acc: {val_acc}")
-        logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, Val Acc: {val_acc}")
+        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
+              "Val Acc: {val_acc}")
+        logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
+                     "Val Loss: {val_loss}, Val Acc: {val_acc}")
+
         # save model checkpoint
         if best_val_loss - val_loss > min_delta:
             best_val_loss = val_loss
