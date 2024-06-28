@@ -28,7 +28,7 @@ class T1w2MraDataset(Dataset):
         or numpy float arrays, default False
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
-                 split_char="-", as_tensor=False):
+                 split_char="-"):
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
@@ -40,7 +40,7 @@ class T1w2MraDataset(Dataset):
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
                           sorted(os.listdir(mra_dir))]
 
-        self.scan_list = self._load_scan_list(as_tensor=as_tensor)
+        self.scan_list = self._load_scan_list()
 
     def __len__(self):
         return self.id_list[-1].get("total_running_slices")
@@ -87,7 +87,7 @@ class T1w2MraDataset(Dataset):
 
         return mri_slice, mra_slice
 
-    def _load_scan_list(self, as_tensor=False):
+    def _load_scan_list(self):
         '''
         Preloader for scans
 
@@ -120,16 +120,7 @@ class T1w2MraDataset(Dataset):
                                      f"and {mra_slices} MRA slices. They "
                                      f"should be equal.")
                 else:
-                    slices = mri_slices
-
-                if as_tensor:
-                    if torch.cuda.is_available():
-                        device = torch.device("cuda")
-                    else:
-                        device = torch.device("cpu")
-
-                    mri_scan = mri_scan.to(device)
-                    mra_scan = mra_scan.to(device)
+                    slices += mri_slices
 
                 scan_list.append({"mri": mri_scan, "mra": mra_scan,
                                   "total_running_slices": slices})
