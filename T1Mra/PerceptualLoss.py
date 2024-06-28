@@ -2,7 +2,6 @@ import torch.nn as nn
 import torchvision.models as models
 from torchvision.models import vgg16, VGG16_Weights
 
-vgg16 = vgg16(weights=VGG16_Weights.DEFAULT).features
 for param in vgg16.parameters():
     param.requires_grad = False
 
@@ -10,7 +9,7 @@ for param in vgg16.parameters():
 class VGG16FeatureExtractor(nn.Module):
     def __init__(self):
 
-        vgg16 = models.vgg16(pretrained=True).features
+        vgg16 = models.vgg16(weights=VGG16_Weights.DEFAULT).features
 
         for param in vgg16.parameters():
             param.requires_grad = False
