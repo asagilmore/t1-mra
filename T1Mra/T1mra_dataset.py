@@ -29,19 +29,20 @@ class T1w2MraDataset(Dataset):
         or numpy float arrays, default False
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
-                 split_char="-"):
+                 split_char="-", preload_dtype=np.float16):
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
         self.transform = transform
         self.split_char = split_char
+        self.preload_dtype = preload_dtype
 
         self.mri_paths = [os.path.join(mri_dir, filename) for filename in
                           sorted(os.listdir(mri_dir))]
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
                           sorted(os.listdir(mra_dir))]
 
-        self.scan_list = self._load_scan_list()
+        self.scan_list = self._load_scan_list(self.preload_dtype)
 
     def __len__(self):
         return self.id_list[-1].get("total_running_slices")
@@ -88,12 +89,15 @@ class T1w2MraDataset(Dataset):
 
         return mri_slice, mra_slice
 
-    def _load_scan_list(self, dtype=np.int16):
+    def _load_scan_list(self, dtype=np.float16):
         '''
         Preloader for scans
 
         Returns a list of dictionaries containing the loaded mri scans,
         aswell as the slice count
+
+        It is important that you specify the datatype such that you do
+        not use unnecessary memory.
 
         Parameters
         ----------
