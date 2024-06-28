@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 import nibabel as nib
 from misc_utils import get_matched_ids
 import os
+import torch
 
 
 class T1w2MraDataset(Dataset):
@@ -15,16 +16,19 @@ class T1w2MraDataset(Dataset):
     mra_dir : str
         Path to the directory containing the MRA images
     slice_axis : int or string, optional
-        Axis along which to slice the 3D MRI images. Default is "all",
+        Axis along which to slice the 3D MRI images. Default is "2",
         an int specifies axes as follows:
         0 = Sagittal (x-axis), 1 = Coronal (y-axis), 2 = Axial (z-axis)
     transform : callable, optional
         Transform to apply to the data
     split_char : str, optional
         Character to split the file names UID, default is "-"
+    as_tensor : bool, optional
+        Whether to preload scans as tensors,
+        or numpy float arrays, default False
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
-                 split_char="-"):
+                 split_char="-", as_tensor=False):
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
@@ -36,7 +40,7 @@ class T1w2MraDataset(Dataset):
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
                           sorted(os.listdir(mra_dir))]
 
-        self.id_list = self._get_id_list()
+        self.scan_list = self._load_scan_list(as_tensor=as_tensor)
 
     def __len__(self):
         return self.id_list[-1].get("total_running_slices")
@@ -65,26 +69,40 @@ class T1w2MraDataset(Dataset):
         raise IndexError("Index out of range, could not find slice")
 
     def _get_slices(self, file_idx, slice_idx):
-        file = self.id_list[file_idx]
-        mri_path = file.get("mri_path")
-        mra_path = file.get("mra_path")
+        mri_scan = self.scan_list[file_idx].get("mri")
+        mra_scan = self.scan_list[file_idx].get("mra")
 
-        mri_mmap = nib.load(mri_path, mmap=True)
-        mra_mmap = nib.load(mra_path, mmap=True)
-
-        mri_slice = mri_mmap.dataobj[:, :, slice_idx]
-        mra_slice = mra_mmap.dataobj[:, :, slice_idx]
+        if self.slice_axis == 0:
+            mri_slice = mri_scan[slice_idx, :, :]
+            mra_slice = mra_scan[slice_idx, :, :]
+        elif self.slice_axis == 1:
+            mri_slice = mri_scan[:, slice_idx, :]
+            mra_slice = mra_scan[:, slice_idx, :]
+        elif self.slice_axis == 2:
+            mri_slice = mri_scan[:, :, slice_idx]
+            mra_slice = mra_scan[:, :, slice_idx]
 
         mri_slice = self.transform(mri_slice)
         mra_slice = self.transform(mra_slice)
 
         return mri_slice, mra_slice
 
-    def _get_id_list(self):
+    def _load_scan_list(self, as_tensor=False):
+        '''
+        Preloader for scans
 
+        Returns a list of dictionaries containing the loaded mri scans,
+        aswell as the slice count
+
+        Parameters
+        ----------
+        as_tensor : bool, optional
+            Whether to return the scans as tensors,
+            or numpy float arrays, default False
+        '''
         ids = get_matched_ids([self.mri_dir, self.mra_dir],
                               split_char=self.split_char)
-        id_list = []
+        scan_list = []
         slices = 0
         for i, id in enumerate(ids):
             matching_mri = [path for path in self.mri_paths if id in path]
@@ -92,29 +110,47 @@ class T1w2MraDataset(Dataset):
 
             if len(matching_mri) == 1 and len(matching_mra) == 1:
                 slices += self._get_num_slices(matching_mri[0])
-                id_list.append({"mri_path": matching_mri[0],
-                                "mra_path": matching_mra[0],
-                                "total_running_slices": slices})
+                mri_scan = nib.load(matching_mri[0]).get_fdata()
+                mra_scan = nib.load(matching_mra[0]).get_fdata()
+
+                mri_slices = self._get_num_slices(matching_mri[0])
+                mra_slices = self._get_num_slices(matching_mra[0])
+                if mri_slices != mra_slices:
+                    raise ValueError(f"ID {id} has {mri_slices} MRI slices "
+                                     f"and {mra_slices} MRA slices. They "
+                                     f"should be equal.")
+                else:
+                    slices = mri_slices
+
+                if as_tensor:
+                    if torch.cuda.is_available():
+                        device = torch.device("cuda")
+                    else:
+                        device = torch.device("cpu")
+
+                    mri_scan = mri_scan.to(device)
+                    mra_scan = mra_scan.to(device)
+
+                scan_list.append({"mri": mri_scan, "mra": mra_scan,
+                                  "total_running_slices": slices})
             else:
                 raise ValueError(f"ID {id} has {len(matching_mri)} MRI images "
                                  f"and {len(matching_mra)} MRA images. There "
                                  f"should be exactly one of each.")
-        return id_list
 
-    def _get_num_slices(self, filepath):
+    def _get_num_slices(self, scan):
         '''
         Returns the number of slices for the MRI image input
         '''
+        # Check if scan is a filepath (string), then load it; otherwise, use it directly
+        if isinstance(scan, str):
+            scan_data = nib.load(scan).get_fdata()
+        else:
+            scan_data = scan
+
+        # Handle the 'all' case or a specific axis
         if self.slice_axis == "all":
-            shape = nib.load(filepath).get_fdata().shape()
+            shape = scan_data.shape
             return sum(shape)
         else:
-            return nib.load(filepath).get_fdata().shape[self.slice_axis]
-
-    def _get_shape(self):
-        '''
-        Returns the shape of the MRI images
-        '''
-        key = next(iter(self.id_dict))
-        path = self.id_dict[key]["mri_path"]
-        return nib.load(path).get_fdata().shape()
+            return scan_data.shape[self.slice_axis]
