@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 import nibabel as nib
 from misc_utils import get_matched_ids
 import os
-import torch
+from tqdm import tqdm
 
 
 class T1w2MraDataset(Dataset):
@@ -104,7 +104,7 @@ class T1w2MraDataset(Dataset):
                               split_char=self.split_char)
         scan_list = []
         slices = 0
-        for i, id in enumerate(ids):
+        for i, id in tqdm(enumerate(ids)):
             matching_mri = [path for path in self.mri_paths if id in path]
             matching_mra = [path for path in self.mra_paths if id in path]
 
