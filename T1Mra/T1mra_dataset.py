@@ -3,6 +3,7 @@ import nibabel as nib
 from misc_utils import get_matched_ids
 import os
 from tqdm import tqdm
+import numpy as np
 
 
 class T1w2MraDataset(Dataset):
@@ -87,7 +88,7 @@ class T1w2MraDataset(Dataset):
 
         return mri_slice, mra_slice
 
-    def _load_scan_list(self, dtype='int16'):
+    def _load_scan_list(self, dtype=np.int16):
         '''
         Preloader for scans
 
@@ -109,11 +110,8 @@ class T1w2MraDataset(Dataset):
             matching_mra = [path for path in self.mra_paths if id in path]
 
             if len(matching_mri) == 1 and len(matching_mra) == 1:
-                mri_scan = nib.load(matching_mri[0]).get_fdata()
-                mra_scan = nib.load(matching_mra[0]).get_fdata()
-
-                mri_scan = mri_scan.astype(dtype)
-                mra_scan = mra_scan.astype(dtype)
+                mri_scan = nib.load(matching_mri[0]).get_fdata(dtype=dtype)
+                mra_scan = nib.load(matching_mra[0]).get_fdata(dtype=dtype)
 
                 mri_slices = self._get_num_slices(matching_mri[0])
                 mra_slices = self._get_num_slices(matching_mra[0])
