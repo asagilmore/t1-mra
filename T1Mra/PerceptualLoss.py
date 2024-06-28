@@ -1,14 +1,11 @@
-import torch
 import torch.nn as nn
 import torchvision.models as models
-import torchvision.transforms as transforms
-from torch.autograd import Variable
 from torchvision.models import vgg16, VGG16_Weights
-import numpy as np
 
 vgg16 = vgg16(weights=VGG16_Weights.DEFAULT).features
 for param in vgg16.parameters():
     param.requires_grad = False
+
 
 class VGG16FeatureExtractor(nn.Module):
     def __init__(self):
