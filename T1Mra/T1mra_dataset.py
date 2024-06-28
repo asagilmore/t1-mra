@@ -45,21 +45,21 @@ class T1w2MraDataset(Dataset):
         self.scan_list = self._load_scan_list(self.preload_dtype)
 
     def __len__(self):
-        return self.id_list[-1].get("total_running_slices")
+        return self.scan_list[-1].get("total_running_slices")
 
     def __getitem__(self, idx):
         # start at best guess for file index
-        file_index = idx // self.id_list[0].get("total_running_slices")
+        file_index = idx // self.scan_list[0].get("total_running_slices")
 
         while file_index <= len(self):
-            running_slices_at_file = self.id_list[file_index].get(
+            running_slices_at_file = self.scan_list[file_index].get(
                                            "total_running_slices")
             if running_slices_at_file > idx:
                 # if we overshot, go back
                 file_index -= 1
             else:
                 # check if current file contains slice
-                last_file_end = self.id_list[file_index - 1].get(
+                last_file_end = self.scan_list[file_index - 1].get(
                                           "total_running_slices")
                 if last_file_end <= idx:
                     # we undershot, go forward
