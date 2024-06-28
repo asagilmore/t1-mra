@@ -1,6 +1,7 @@
 import argparse
 import os
 import logging
+import multiprocessing
 
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
@@ -56,6 +57,8 @@ if __name__ == "__main__":
                         "of epochs to wait for improvement before stopping")
     parser.add_argument("--min_delta", type=float, default=0.001,
                         help="Minimum change to qualify as an improvement")
+    parser.add_argument("--num_workers", type=int, default=-1, help="Number "
+                        "of workers for dataloader")
     args = parser.parse_args()
 
     # Early stopping parameters
@@ -83,14 +86,19 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
+    # check cpu count
+    if args.num_workers == -1:
+        num_workers = multiprocessing.cpu_count() - 1
 
     # def datasets/dataloaders
     train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
                                    os.path.join(args.data_dir, "train", "MRA"),
-                                   transform=train_transform)
+                                   transform=train_transform,
+                                   num_workers=num_workers)
     valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
                                    os.path.join(args.data_dir, "valid", "MRA"),
-                                   transform=train_transform)
+                                   transform=train_transform,
+                                   num_workers=num_workers)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
                                   shuffle=True)
