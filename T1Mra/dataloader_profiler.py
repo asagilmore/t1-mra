@@ -19,22 +19,31 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    print("Profiling DataLoader performance"
+          f" with {args.num_workers} workers and batch size {args.batch_size}"
+          f" on {args.num_batches} batches")
+
     test_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
+    start_time = time.time()
     test_dataset = T1w2MraDataset(pjoin(args.data_dir, "T1W"),
                                   pjoin(args.data_dir, "MRA"),
                                   test_transform)
+    stop_time = time.time()
+    elapsed_time = stop_time - start_time
+    print("Time to create Dataset, "
+          f"preload into mem: {elapsed_time:.4f} seconds")
 
     start_time = time.time()
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size,
                                  num_workers=args.num_workers)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
-    print("Time to create DataLoader, "
-          f"preload into mem: {elapsed_time:.4f} seconds")
+    print("Time to create DataLoader: "
+          f"{elapsed_time:.4f} seconds")
 
     # warm up
     for i, _ in enumerate(test_dataloader):
@@ -50,5 +59,5 @@ if __name__ == "__main__":
     elapsed_time = end_time - start_time
     time_per_batch = elapsed_time / args.num_batches
     print(f"Time per batch: {time_per_batch:.4f} seconds")
-    print(f"Total time: {elapsed_time:.4f} seconds")
+    print(f"Total time for all batches: {elapsed_time:.4f} seconds")
 
