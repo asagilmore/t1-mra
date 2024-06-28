@@ -12,7 +12,7 @@ if __name__ == "__main__":
                         "workers for data loading")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch "
                         "size for training")
-    parser.add_argument("--num_batches", type=int, default=100, help="Number "
+    parser.add_argument("--num_batches", type=int, default=10, help="Number "
                         "of batches to process")
     parser.add_argument("--data_dir", type=str, required=True, help="Path to "
                         "the data directory")
@@ -28,8 +28,13 @@ if __name__ == "__main__":
                                   pjoin(args.data_dir, "MRA"),
                                   test_transform)
 
+    start_time = time.time()
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size,
                                  num_workers=args.num_workers)
+    stop_time = time.time()
+    elapsed_time = stop_time - start_time
+    print("Time to create DataLoader, "
+          f"preload into mem: {elapsed_time:.4f} seconds")
 
     # warm up
     for i, _ in enumerate(test_dataloader):
