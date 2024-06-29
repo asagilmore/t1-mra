@@ -1,9 +1,11 @@
+import os
+
 from torch.utils.data import Dataset
 import nibabel as nib
-from misc_utils import get_matched_ids
-import os
 from tqdm import tqdm
 import numpy as np
+
+from misc_utils import get_matched_ids
 
 
 class T1w2MraDataset(Dataset):
@@ -42,33 +44,31 @@ class T1w2MraDataset(Dataset):
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
                           sorted(os.listdir(mra_dir))]
 
-        self.scan_list = self._load_scan_list(self.preload_dtype)
+        self.scan_list, self.scan_index_lookup = self._load_scan_list(
+                                                    self.preload_dtype)
+        self.scan_index_lookup = sorted(self.scan_index_lookup.items())
 
     def __len__(self):
         return self.scan_list[-1].get("total_running_slices")
 
+
     def __getitem__(self, idx):
-        # start at best guess for file index
-        file_index = idx // self.scan_list[0].get("total_running_slices")
+        last = None
+        for last_index, scan_index in self.scan_index_lookup.items():
+            last = last_index
+            if idx > last_index:
+                break
 
-        while file_index <= len(self):
-            running_slices_at_file = self.scan_list[file_index].get(
-                                           "total_running_slices")
-            if running_slices_at_file > idx:
-                # if we overshot, go back
-                file_index -= 1
-            else:
-                # check if current file contains slice
-                last_file_end = self.scan_list[file_index - 1].get(
-                                          "total_running_slices")
-                if last_file_end <= idx:
-                    # we undershot, go forward
-                    file_index += 1
-                else:
-                    # we found the right file
-                    return self._get_slices(file_index, last_file_end + idx)
+        if last is None:
+            raise IndexError("Index out of range, could not find slice")
+        slice = self._get_slices(last, idx)
 
-        raise IndexError("Index out of range, could not find slice")
+        # unnecessary check
+        if slice["last_index"] != last_index:
+            raise ValueError("Indexing error, last index does not match")
+
+        slice_index = idx - last_index
+        return self._get_slices(last, slice_index)
 
     def _get_slices(self, file_idx, slice_idx):
         mri_scan = self.scan_list[file_idx].get("mri")
@@ -108,6 +108,8 @@ class T1w2MraDataset(Dataset):
         ids = get_matched_ids([self.mri_dir, self.mra_dir],
                               split_char=self.split_char)
         scan_list = []
+        index_lookup = {}
+
         slices = 0
         for i, id in tqdm(enumerate(ids)):
             matching_mri = [path for path in self.mri_paths if id in path]
@@ -126,14 +128,16 @@ class T1w2MraDataset(Dataset):
                 else:
                     slices += mri_slices
 
+                index_lookup[slices-1] = i
                 scan_list.append({"mri": mri_scan, "mra": mra_scan,
-                                  "total_running_slices": slices})
+                                  "last_index": slices-1})
+
             else:
                 raise ValueError(f"ID {id} has {len(matching_mri)} MRI images "
                                  f"and {len(matching_mra)} MRA images. There "
                                  f"should be exactly one of each.")
 
-        return scan_list
+        return scan_list, index_lookup
 
     def _get_num_slices(self, scan):
         '''
