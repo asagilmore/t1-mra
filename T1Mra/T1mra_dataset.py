@@ -133,6 +133,8 @@ class T1w2MraDataset(Dataset):
                                  f"and {len(matching_mra)} MRA images. There "
                                  f"should be exactly one of each.")
 
+        return scan_list
+
     def _get_num_slices(self, scan):
         '''
         Returns the number of slices for the MRI image input
