@@ -5,7 +5,7 @@ import nibabel as nib
 from tqdm import tqdm
 import numpy as np
 
-from .misc_utils import get_matched_ids
+from misc_utils import get_matched_ids
 
 
 class T1w2MraDataset(Dataset):
