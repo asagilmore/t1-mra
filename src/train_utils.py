@@ -1,4 +1,6 @@
+import random
 import torch
+import numpy as np
 
 
 def train(model, loader, criterion, optimizer, device):
@@ -29,3 +31,19 @@ def validate(model, loader, criterion, device):
             preds = torch.argmax(outputs, dim=1)
             correct += (preds == labels).sum().item()
     return val_loss / len(loader), correct / len(loader.dataset)
+
+
+class RandomRotationTransform90:
+    def __call__(self, img):
+        rotations = random.randint(0,3)
+        return np.rot90(img, rotations)
+
+
+class RandomFlipTransform():
+    def __call__(self, img):
+        flip = random.random() > 0.5
+        axis = random.randint(0, 1)
+        if flip:
+            return np.flip(img, axis=axis)
+        else:
+            return img

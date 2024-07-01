@@ -2,6 +2,7 @@ import argparse
 import os
 import logging
 import multiprocessing
+import psutil
 
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
@@ -12,7 +13,8 @@ from torch.nn import MSELoss
 from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from UNet import UNet
-from train_utils import train, validate
+from train_utils import (train, validate,
+                         RandomRotationTransform90, RandomFlipTransform)
 
 
 if __name__ == "__main__":
@@ -54,19 +56,10 @@ if __name__ == "__main__":
     feature_extractor.to(device)
     perceptual_loss = PerceptualLoss(feature_extractor, MSELoss)
 
-    # random rotation in descrete 90 deg steps workaround
-
-    class RandomRotation90:
-        def __init__(self, angles=[0, 90, 180, 270]):
-            self.angles = angles
-
-        def __call__(self, img):
-            angle = random.choice(self.angles)
-            return transforms.functional.rotate(img, angle)
     # def transforms
     train_transform = transforms.Compose([
-        RandomRotation90(),
-        transforms.RandomHorizontalFlip(),
+        RandomRotationTransform90(),
+        RandomFlipTransform(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
@@ -89,6 +82,11 @@ if __name__ == "__main__":
                                   shuffle=True)
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size,
                                   shuffle=False)
+
+    # Print current memory usage
+    process = psutil.Process(os.getpid())
+    current_memory = process.memory_info().rss
+    print(f"Current memory usage: {current_memory} bytes")
 
     # def model
     model = UNet(1, 1)

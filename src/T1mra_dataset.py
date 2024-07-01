@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from torch.utils.data import Dataset
 import nibabel as nib
@@ -41,7 +42,7 @@ class T1w2MraDataset(Dataset):
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
                           sorted(os.listdir(mra_dir))]
 
-        self.scan_list = self._load_scan_list(self.preload_dtype)
+        self.scan_list = self._load_scan_list()
 
     def __len__(self):
         if self.scan_list:
@@ -87,35 +88,54 @@ class T1w2MraDataset(Dataset):
 
         return mri_slice, mra_slice
 
-    def _load_scan_list(self, dtype=np.float16):
+    def _load_scan(self, id):
+        matching_mri = [path for path in self.mri_paths if id in path]
+        matching_mra = [path for path in self.mra_paths if id in path]
+
+        if len(matching_mri) == 1 and len(matching_mra) == 1:
+            mri_scan = nib.load(matching_mri[0]).get_fdata(
+                                                    dtype=self.preload_dtype)
+            mra_scan = nib.load(matching_mra[0]).get_fdata(
+                                                    dtype=self.preload_dtype)
+
+            mri_slices = self._get_num_slices(matching_mri[0])
+            mra_slices = self._get_num_slices(matching_mra[0])
+
+            if mri_slices != mra_slices:
+                raise ValueError(f"ID {id} has {mri_slices} MRI slices "
+                                 f"and {mra_slices} MRA slices. They "
+                                 "should be equal.")
+            else:
+                slices = mri_slices
+
+        else:
+            raise ValueError("Multiple scans found for ID "
+                             f"there should be only one MRA & T1 for {id}")
+
+        return {'mri': mri_scan, 'mra': mra_scan, 'slices': slices}
+
+    def _load_scan_list(self):
         ids = get_matched_ids([self.mri_dir, self.mra_dir],
                               split_char=self.split_char)
+
+        # mutlthreading starts here
+        with ThreadPoolExecutor() as executor:
+            result_list = executor.map(self._load_scan, ids)
+
+            # we now have a list as follows:
+            # [{'mri': mri_scan, 'mra': mra_scan, 'slices': slices}, ...]
+
+        # now we count up the slices and add the first and last index
         scan_list = []
-
         slices = 0
-        for i, id in tqdm(enumerate(ids)):
-            matching_mri = [path for path in self.mri_paths if id in path]
-            matching_mra = [path for path in self.mra_paths if id in path]
+        for i, result in enumerate(result_list):
+            first_index = slices
+            slices += result.get('slices')
+            last_index = slices - 1
+            scan_list.append({'mri': result.get('mri'), 'mra': result.get('mra'),
+                              'last_index': last_index,
+                              'first_index': first_index})
 
-            if len(matching_mri) == 1 and len(matching_mra) == 1:
-                mri_scan = nib.load(matching_mri[0]).get_fdata(dtype=dtype)
-                mra_scan = nib.load(matching_mra[0]).get_fdata(dtype=dtype)
-
-                mri_slices = self._get_num_slices(matching_mri[0])
-                mra_slices = self._get_num_slices(matching_mra[0])
-
-                first_index = slices
-
-                if mri_slices != mra_slices:
-                    raise ValueError(f"ID {id} has {mri_slices} MRI slices "
-                                     f"and {mra_slices} MRA slices. They "
-                                     f"should be equal.")
-                else:
-                    slices += mri_slices
-
-                scan_list.append({"mri": mri_scan, "mra": mra_scan,
-                                  "last_index": (slices-1),
-                                  "first_index": first_index})
         return scan_list
 
     def _get_num_slices(self, scan):
