@@ -1,7 +1,10 @@
 import sys
-# kinda hacky way to fix this but wte
-sys.path.append('../')  # noqa: E402
-from T1Mra.misc_utils import get_matched_ids, get_filepath_from_id  # noqa: E402, E501
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                             'src')))
+
+from misc_utils import get_matched_ids, get_filepath_from_id  # noqa: E402
 
 
 def test_get_matched_ids():

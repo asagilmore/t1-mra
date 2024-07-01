@@ -1,8 +1,4 @@
-import torch
 import torch.nn as nn
-import torchvision.models as models
-import torchvision.transforms as transforms
-from torch.autograd import Variable
 from torchvision.models import vgg16, VGG16_Weights
 
 

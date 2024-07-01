@@ -1,7 +1,9 @@
 import sys
-# kinda hacky way to fix this but wte
-sys.path.append('../')  # noqa: E402
-from T1Mra import T1w2MraDataset  # noqa: E402
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                             'src')))
+from T1mra_dataset import T1w2MraDataset  # noqa: E402
 from torchvision import transforms  # noqa: E402
 
 
@@ -29,4 +31,3 @@ def test_T1w2MraDataset():
     mri, mra = test_dataset[0]
     assert mri.shape == mra.shape
     assert mri.shape == (512, 512)
-
