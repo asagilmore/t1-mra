@@ -2,7 +2,7 @@ import time
 import argparse
 from os.path import join as pjoin
 
-from .T1mra_dataset import T1w2MraDataset
+from T1mra_dataset import T1w2MraDataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
