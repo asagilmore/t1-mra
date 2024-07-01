@@ -26,13 +26,9 @@ class T1w2MraDataset(Dataset):
         Transform to apply to the data
     split_char : str, optional
         Character to split the file names UID, default is "-"
-    as_tensor : bool, optional
-        Whether to preload scans as tensors,
-        or numpy float arrays, default False
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
                  split_char="-", preload_dtype=np.float16):
-        print("T1w2MraDataset init")
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
@@ -49,26 +45,28 @@ class T1w2MraDataset(Dataset):
                                                     self.preload_dtype)
 
     def __len__(self):
-        last_index, _ = self.scan_index_lookup[-1]
-        return last_index + 1
+        if self.scan_index_lookup:
+            last_index = next(reversed(self.scan_index_lookup))
+            return last_index + 1
+        else:
+            return 0
 
     def __getitem__(self, idx):
-        last = None
+        last_index, scan_index = next(iter(self.scan_index_lookup.items()))
+        running_last_index = last_index
+        running_scan_index = scan_index
+
         for last_index, scan_index in self.scan_index_lookup.items():
-            last = last_index
-            if idx > last_index:
+            if idx < last_index:
                 break
+            running_last_index = last_index
+            running_scan_index = scan_index
 
-        if last is None:
-            raise IndexError("Index out of range, could not find slice")
-        slice = self._get_slices(last, idx)
+        if running_last_index < idx:
+            raise IndexError(f'Index {idx} is out of bounds')
 
-        # unnecessary check
-        if slice["last_index"] != last_index:
-            raise ValueError("Indexing error, last index does not match")
-
-        slice_index = idx - last_index
-        return self._get_slices(last, slice_index)
+        slice_index = idx - running_last_index
+        return self._get_slices(running_scan_index, slice_index)
 
     def _get_slices(self, file_idx, slice_idx):
         mri_scan = self.scan_list[file_idx].get("mri")
