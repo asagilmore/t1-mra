@@ -48,12 +48,9 @@ class T1w2MraDataset(Dataset):
         self.scan_list, self.scan_index_lookup = self._load_scan_list(
                                                     self.preload_dtype)
 
-        # index lookup should be sorted but just to be sure
-        self.scan_index_lookup = {k: v for k, v in
-                                  sorted(self.scan_index_lookup.items())}
-
     def __len__(self):
-        return self.scan_index_lookup[-1][0] + 1
+        last_index, _ = self.scan_index_lookup[-1]
+        return last_index + 1
 
     def __getitem__(self, idx):
         last = None
