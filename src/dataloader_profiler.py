@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_workers", type=int, default=4, help="Number of "
+    parser.add_argument("--num_workers", type=int, default=1, help="Number of "
                         "workers for data loading")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch "
                         "size for training")
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     start_time = time.time()
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size,
-                                 num_workers=args.num_workers)
+                                 num_workers=args.num_workers, pin_memory=True)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     print("Time to create DataLoader: "
@@ -62,4 +62,3 @@ if __name__ == "__main__":
     time_per_batch = elapsed_time / args.num_batches
     print(f"Time per batch: {time_per_batch:.4f} seconds")
     print(f"Total time for all batches: {elapsed_time:.4f} seconds")
-

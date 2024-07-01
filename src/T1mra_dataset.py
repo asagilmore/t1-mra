@@ -41,36 +41,36 @@ class T1w2MraDataset(Dataset):
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
                           sorted(os.listdir(mra_dir))]
 
-        self.scan_list, self.scan_index_lookup = self._load_scan_list(
-                                                    self.preload_dtype)
+        self.scan_list = self._load_scan_list(self.preload_dtype)
 
     def __len__(self):
-        if self.scan_index_lookup:
-            last_index = next(reversed(self.scan_index_lookup))
-            return last_index + 1
+        if self.scan_list:
+            return self.scan_list[-1].get("last_index") + 1
         else:
             return 0
 
     def __getitem__(self, idx):
-        last_index, scan_index = next(iter(self.scan_index_lookup.items()))
-        running_last_index = last_index
-        running_scan_index = scan_index
+        # handle negative indexing
+        if idx < 0:
+            idx = len(self) + idx
 
-        for last_index, scan_index in self.scan_index_lookup.items():
-            if idx < last_index:
+        scan_to_use = None
+        for scan in self.scan_list:
+            if idx <= scan.get("last_index") and idx >= scan.get("first_index"):
+                scan_to_use = scan
                 break
-            running_last_index = last_index
-            running_scan_index = scan_index
 
-        if running_last_index < idx:
-            raise IndexError(f'Index {idx} is out of bounds')
+        if scan_to_use is None:
+            raise IndexError(f"Index {idx} out of range for dataset")
 
-        slice_index = idx - running_last_index
-        return self._get_slices(running_scan_index, slice_index)
+        slice_index = scan_to_use.get("first_index") - idx
 
-    def _get_slices(self, file_idx, slice_idx):
-        mri_scan = self.scan_list[file_idx].get("mri")
-        mra_scan = self.scan_list[file_idx].get("mra")
+        return self._get_slices(scan_to_use, slice_index)
+
+    def _get_slices(self, scan_object, slice_idx):
+
+        mri_scan = scan_object.get("mri")
+        mra_scan = scan_object.get("mra")
 
         if self.slice_axis == 0:
             mri_slice = mri_scan[slice_idx, :, :]
@@ -88,25 +88,9 @@ class T1w2MraDataset(Dataset):
         return mri_slice, mra_slice
 
     def _load_scan_list(self, dtype=np.float16):
-        '''
-        Preloader for scans
-
-        Returns a list of dictionaries containing the loaded mri scans,
-        aswell as the slice count
-
-        It is important that you specify the datatype such that you do
-        not use unnecessary memory.
-
-        Parameters
-        ----------
-        as_tensor : bool, optional
-            Whether to return the scans as tensors,
-            or numpy float arrays, default False
-        '''
         ids = get_matched_ids([self.mri_dir, self.mra_dir],
                               split_char=self.split_char)
         scan_list = []
-        index_lookup = {}
 
         slices = 0
         for i, id in tqdm(enumerate(ids)):
@@ -119,6 +103,9 @@ class T1w2MraDataset(Dataset):
 
                 mri_slices = self._get_num_slices(matching_mri[0])
                 mra_slices = self._get_num_slices(matching_mra[0])
+
+                first_index = slices
+
                 if mri_slices != mra_slices:
                     raise ValueError(f"ID {id} has {mri_slices} MRI slices "
                                      f"and {mra_slices} MRA slices. They "
@@ -126,16 +113,10 @@ class T1w2MraDataset(Dataset):
                 else:
                     slices += mri_slices
 
-                index_lookup[slices-1] = i
                 scan_list.append({"mri": mri_scan, "mra": mra_scan,
-                                  "last_index": slices-1})
-
-            else:
-                raise ValueError(f"ID {id} has {len(matching_mri)} MRI images "
-                                 f"and {len(matching_mra)} MRA images. There "
-                                 f"should be exactly one of each.")
-
-        return scan_list, index_lookup
+                                  "last_index": (slices-1),
+                                  "first_index": first_index})
+        return scan_list
 
     def _get_num_slices(self, scan):
         '''
