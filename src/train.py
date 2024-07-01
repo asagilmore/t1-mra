@@ -54,9 +54,18 @@ if __name__ == "__main__":
     feature_extractor.to(device)
     perceptual_loss = PerceptualLoss(feature_extractor, MSELoss)
 
+    # random rotation in descrete 90 deg steps workaround
+
+    class RandomRotation90:
+        def __init__(self, angles=[0, 90, 180, 270]):
+            self.angles = angles
+
+        def __call__(self, img):
+            angle = random.choice(self.angles)
+            return transforms.functional.rotate(img, angle)
     # def transforms
     train_transform = transforms.Compose([
-        transforms.randomRotation(degrees=[0, 90, 180, 270]),
+        RandomRotation90(),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
@@ -71,12 +80,10 @@ if __name__ == "__main__":
     # def datasets/dataloaders
     train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
                                    os.path.join(args.data_dir, "train", "MRA"),
-                                   transform=train_transform,
-                                   num_workers=num_workers)
+                                   transform=train_transform)
     valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
                                    os.path.join(args.data_dir, "valid", "MRA"),
-                                   transform=train_transform,
-                                   num_workers=num_workers)
+                                   transform=train_transform)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
                                   shuffle=True)
