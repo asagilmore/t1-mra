@@ -12,36 +12,7 @@ from torch.nn import MSELoss
 from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from UNet import UNet
-
-
-def train(model, loader, criterion, optimizer, device):
-    model.train()
-    running_loss = 0.0
-    for images, masks in loader:
-        images, masks = images.to(device).float(), masks.to(device).float()
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, masks)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-    return running_loss/len(loader)
-
-
-def validate(model, loader, criterion, device):
-    model.eval()
-    val_loss = 0.0
-    correct = 0
-    with torch.no_grad():
-        for inputs, labels in loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            val_loss += loss.item()
-            preds = torch.argmax(outputs, dim=1)
-            correct += (preds == labels).sum().item()
-    return val_loss / len(loader), correct / len(loader.dataset)
+from train_utils import train, validate
 
 
 if __name__ == "__main__":
@@ -50,7 +21,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str, required=True, help="Dir "
                         "containing training data. "
-                        "Should have train, valid, test subdirectories")
+                        "Must have train, valid, test subdirectories")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch"
                         "size for training")
     parser.add_argument("--num_epochs", type=int, default=500, help="Number "
@@ -85,6 +56,8 @@ if __name__ == "__main__":
 
     # def transforms
     train_transform = transforms.Compose([
+        transforms.randomRotation(degrees=[0, 90, 180, 270]),
+        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
@@ -92,6 +65,8 @@ if __name__ == "__main__":
     # check cpu count
     if args.num_workers == -1:
         num_workers = multiprocessing.cpu_count() - 1
+    else:
+        num_workers = args.num_workers
 
     # def datasets/dataloaders
     train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
