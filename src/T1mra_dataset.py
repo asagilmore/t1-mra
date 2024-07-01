@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 import nibabel as nib
 from tqdm import tqdm
 import numpy as np
+from scipy.ndimage import zoom
 
 from misc_utils import get_matched_ids
 
@@ -27,9 +28,18 @@ class T1w2MraDataset(Dataset):
         Transform to apply to the data
     split_char : str, optional
         Character to split the file names UID, default is "-"
+    preload_dtype : numpy dtype, optional
+        Data type to use when preloading the images, default is np.float16
+    scan_size : str | tuple, optional
+        Sets how to handle scans of different sizes. Default is 'most'
+        'most' - resample all images to the most common shape
+        'largest' - resample all images to the largest shape
+        'smallest' - resample all images to the smallest shape
+        tuple - resample all images to the shape specified in the tuple
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
-                 split_char="-", preload_dtype=np.float16):
+                 split_char="-", preload_dtype=np.float16,
+                 scan_size='most'):
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
@@ -37,6 +47,8 @@ class T1w2MraDataset(Dataset):
         self.split_char = split_char
         self.preload_dtype = preload_dtype
 
+        # TODO: use this to select a good shape size and resample
+        # images to the same size
         self.shape_frequencies = {}
         self.mri_paths = [os.path.join(mri_dir, filename) for filename in
                           sorted(os.listdir(mri_dir))]
@@ -44,6 +56,8 @@ class T1w2MraDataset(Dataset):
                           sorted(os.listdir(mra_dir))]
 
         self.scan_list = self._load_scan_list()
+
+        self._resample_scan_list(scan_size)
 
     def __len__(self):
         if self.scan_list:
@@ -94,6 +108,49 @@ class T1w2MraDataset(Dataset):
             self.shape_frequencies[shape] = 1
         else:
             self.shape_frequencies[shape] += 1
+
+    def _resample_image(self, image, new_shape):
+        '''
+        Resamples the input image to the new shape
+        '''
+        zoom_factors = [new_dim / old_dim for new_dim, old_dim in
+                        zip(new_shape, image.shape)]
+        return zoom(image, zoom_factors, order=1)
+
+    def _resample_scan_list(self, scan_size):
+        if scan_size == 'most':
+            new_shape = max(self.shape_frequencies,
+                            key=self.shape_frequencies.get)
+
+        elif scan_size == 'largest':
+            largest_shape = None
+            largest_size = 0
+            for shape, occurrences in self.shapes_dict.items():
+
+                size = shape[0] * shape[1] * shape[2]
+                if size > largest_size:
+                    largest_shape = shape
+                    largest_size = size
+            new_shape = largest_shape
+
+        elif scan_size == 'smallest':
+            smallest_shape = None
+            smallest_size = np.inf
+            for shape, occurrences in self.shapes_dict.items():
+                size = shape[0] * shape[1] * shape[2]
+                if size < smallest_size:
+                    smallest_shape = shape
+                    smallest_size = size
+            new_shape = smallest_shape
+
+        else:
+            new_shape = scan_size
+
+        for scan in self.scan_list:
+            if scan['mri'].shape != new_shape:
+                scan['mri'] = self._resample_image(scan['mri'], new_shape)
+            if scan['mra'].shape != new_shape:
+                scan['mra'] = self._resample_image(scan['mra'], new_shape)
 
     def _load_scan(self, id):
         matching_mri = [path for path in self.mri_paths if id in path]
