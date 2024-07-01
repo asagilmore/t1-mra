@@ -11,7 +11,7 @@ class VGG16FeatureExtractor(nn.Module):
         for param in vgg16_inst.parameters():
             param.requires_grad = False
 
-        self.features = nn.Sequential(*list(vgg16.children()))
+        self.features = nn.Sequential(*list(vgg16_inst.children()))
 
     def forward(self, x):
 
