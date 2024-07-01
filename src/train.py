@@ -70,6 +70,7 @@ if __name__ == "__main__":
         num_workers = args.num_workers
 
     # def datasets/dataloaders
+    print(f'Loading datasets from {args.data_dir}')
     train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
                                    os.path.join(args.data_dir, "train", "MRA"),
                                    transform=train_transform)
@@ -97,13 +98,16 @@ if __name__ == "__main__":
 
     # load checkpoint if exists
     if os.path.exists("model_checkpoint.pth"):
+        print("Model checkpoint found, loading")
         checkpoint = torch.load("model_checkpoint.pth")
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         start_epoch = checkpoint["epoch"]
+        print(f'Loaded model, starting from epoch {start_epoch}')
     else:
         start_epoch = 0
 
+    print(f'Starting training for {num_epochs} epochs')
     # training loop
     for epoch in range(start_epoch, num_epochs):
         train_loss = train(model, train_dataloader, perceptual_loss,
