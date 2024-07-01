@@ -9,7 +9,10 @@ import torch
 import torch.optim as optim
 from torch.nn import MSELoss
 
-from T1Mra import UNet, T1w2MraDataset, PerceptualLoss, VGG16FeatureExtractor
+from T1mra_dataset import T1w2MraDataset
+from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
+from UNet import UNet
+
 
 def train(model, loader, criterion, optimizer, device):
     model.train()
