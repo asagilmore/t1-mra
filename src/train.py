@@ -58,12 +58,11 @@ if __name__ == "__main__":
 
     # def transforms
     train_transform = transforms.Compose([
+        transforms.ToTensor(),
         RandomRotationTransform90(),
         RandomFlipTransform(),
-        transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5])
     ])
-
     # check cpu count
     if args.num_workers == -1:
         num_workers = multiprocessing.cpu_count() - 1
@@ -86,7 +85,7 @@ if __name__ == "__main__":
     # Print current memory usage
     process = psutil.Process(os.getpid())
     current_memory = process.memory_info().rss
-    print(f"Current memory usage: {current_memory} bytes")
+    print(f"Current memory usage: {current_memory / (1024**3)} GB")
 
     # def model
     model = UNet(1, 1)

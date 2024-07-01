@@ -1,6 +1,5 @@
 import random
 import torch
-import numpy as np
 
 
 def train(model, loader, criterion, optimizer, device):
@@ -35,15 +34,15 @@ def validate(model, loader, criterion, device):
 
 class RandomRotationTransform90:
     def __call__(self, img):
-        rotations = random.randint(0,3)
-        return np.rot90(img, rotations)
+        rotations = random.randint(0, 3)
+        return torch.rot90(img, rotations, [1, 2])
 
 
 class RandomFlipTransform():
     def __call__(self, img):
         flip = random.random() > 0.5
-        axis = random.randint(0, 1)
+        axis = random.randint(1, 2)
         if flip:
-            return np.flip(img, axis=axis)
+            return torch.flip(img, [axis])
         else:
             return img

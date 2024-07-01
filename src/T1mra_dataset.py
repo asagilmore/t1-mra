@@ -37,6 +37,7 @@ class T1w2MraDataset(Dataset):
         self.split_char = split_char
         self.preload_dtype = preload_dtype
 
+        self.shape_frequencies = {}
         self.mri_paths = [os.path.join(mri_dir, filename) for filename in
                           sorted(os.listdir(mri_dir))]
         self.mra_paths = [os.path.join(mra_dir, filename) for filename in
@@ -88,6 +89,12 @@ class T1w2MraDataset(Dataset):
 
         return mri_slice, mra_slice
 
+    def _update_shape_frequencies(self, shape):
+        if shape not in self.shape_frequencies:
+            self.shape_frequencies[shape] = 1
+        else:
+            self.shape_frequencies[shape] += 1
+
     def _load_scan(self, id):
         matching_mri = [path for path in self.mri_paths if id in path]
         matching_mra = [path for path in self.mra_paths if id in path]
@@ -97,6 +104,10 @@ class T1w2MraDataset(Dataset):
                                                     dtype=self.preload_dtype)
             mra_scan = nib.load(matching_mra[0]).get_fdata(
                                                     dtype=self.preload_dtype)
+
+            # update shape frequencies
+            self._update_shape_frequencies(mri_scan.shape)
+            self._update_shape_frequencies(mra_scan.shape)
 
             mri_slices = self._get_num_slices(matching_mri[0])
             mra_slices = self._get_num_slices(matching_mra[0])
