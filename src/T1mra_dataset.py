@@ -120,8 +120,8 @@ class T1w2MraDataset(Dataset):
 
         # mutlthreading starts here
         with ThreadPoolExecutor() as executor:
-            result_list = executor.map(self._load_scan, ids)
-
+            result_list = list(tqdm(executor.map(self._load_scan, ids),
+                                    total=len(ids)))
             # we now have a list as follows:
             # [{'mri': mri_scan, 'mra': mra_scan, 'slices': slices}, ...]
 
