@@ -2,7 +2,7 @@ import time
 import argparse
 from os.path import join as pjoin
 
-from T1mra_dataset import T1w2MraDataset
+from .T1mra_dataset import T1w2MraDataset
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
@@ -36,6 +36,8 @@ if __name__ == "__main__":
     elapsed_time = stop_time - start_time
     print("Time to create Dataset, "
           f"preload into mem: {elapsed_time:.4f} seconds")
+
+    print(f'Length of dataset: {len(test_dataset)}')
 
     start_time = time.time()
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size,

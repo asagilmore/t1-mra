@@ -5,7 +5,7 @@ import nibabel as nib
 from tqdm import tqdm
 import numpy as np
 
-from misc_utils import get_matched_ids
+from .misc_utils import get_matched_ids
 
 
 class T1w2MraDataset(Dataset):
@@ -32,6 +32,7 @@ class T1w2MraDataset(Dataset):
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
                  split_char="-", preload_dtype=np.float16):
+        print("T1w2MraDataset init")
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
@@ -49,8 +50,7 @@ class T1w2MraDataset(Dataset):
         self.scan_index_lookup = sorted(self.scan_index_lookup.items())
 
     def __len__(self):
-        return self.scan_list[-1].get("total_running_slices")
-
+        return self.scan_index_lookup[-1][0] + 1
 
     def __getitem__(self, idx):
         last = None
