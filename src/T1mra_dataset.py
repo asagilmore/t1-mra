@@ -38,10 +38,14 @@ class T1w2MraDataset(Dataset):
     slice_width : int, optional
         Number of slices to take on either side of the slice_axis. Default is 1
         Must be an odd number.
+    width_labels : bool, optional
+        If True, the labels will be the same width as the input images.
+        Default is False, which will return the center slice as the label.
+        Ignored if slice_width is 1.
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
                  split_char="-", preload_dtype=np.float16,
-                 scan_size='most', slice_width=1):
+                 scan_size='most', slice_width=1, width_labels=False):
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
@@ -52,6 +56,7 @@ class T1w2MraDataset(Dataset):
             raise ValueError("slice_width must be an odd number")
         else:
             self.slice_width = slice_width
+        self.width_labels = width_labels
 
         # TODO: use this to select a good shape size and resample
         # images to the same size
@@ -107,13 +112,23 @@ class T1w2MraDataset(Dataset):
 
         if self.slice_axis == 0:
             mri_slice = mri_scan[start_idx:end_idx, :, :]
+            if self.width_labels:
+                mra_slice = mra_scan[start_idx:end_idx, :, :]
+            else:
+                mra_slice = mra_scan[slice_idx, :, :]
             mra_slice = mra_scan[start_idx:end_idx, :, :]
         elif self.slice_axis == 1:
             mri_slice = mri_scan[:, start_idx:end_idx, :]
-            mra_slice = mra_scan[:, start_idx:end_idx, :]
+            if self.width_labels:
+                mra_slice = mra_scan[:, start_idx:end_idx, :]
+            else:
+                mra_slice = mra_scan[:, slice_idx, :]
         elif self.slice_axis == 2:
             mri_slice = mri_scan[:, :, start_idx:end_idx]
-            mra_slice = mra_scan[:, :, start_idx:end_idx]
+            if self.width_labels:
+                mra_slice = mra_scan[:, :, start_idx:end_idx]
+            else:
+                mra_slice = mra_scan[:, :, slice_idx]
 
         mri_slice, mra_slice = self.transform(mri_slice, mra_slice)
 
