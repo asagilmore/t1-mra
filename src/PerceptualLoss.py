@@ -1,24 +1,20 @@
 import torch.nn as nn
-import torchvision.models as models
 from torchvision.models import vgg16, VGG16_Weights
-
-vgg16 = vgg16(weights=VGG16_Weights.DEFAULT).features
-for param in vgg16.parameters():
-    param.requires_grad = False
 
 
 class VGG16FeatureExtractor(nn.Module):
     def __init__(self):
+        super(VGG16FeatureExtractor, self).__init__()
 
-        vgg16 = models.vgg16(pretrained=True).features
+        vgg16_inst = vgg16(weights=VGG16_Weights.DEFAULT).features[:16]
 
-        for param in vgg16.parameters():
+        for param in vgg16_inst.parameters():
             param.requires_grad = False
 
-        super(VGG16FeatureExtractor, self).__init__()
-        self.features = vgg16[:16]
+        self.features = nn.Sequential(*list(vgg16_inst.children()))
 
     def forward(self, x):
+
         return self.features(x)
 
 
