@@ -130,6 +130,11 @@ if __name__ == "__main__":
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()
             }, "model_checkpoint.pth")
+
+            # here we have successfully trained one epoch
+            # throw an error to break the script and hopefully
+            # trigger a requeue through slurm
+            raise ValueError("Training epoch complete")
         else:
             epochs_no_improve += 1
 
