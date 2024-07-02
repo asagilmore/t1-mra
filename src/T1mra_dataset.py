@@ -96,10 +96,14 @@ class T1w2MraDataset(Dataset):
 
         # because first and last indexs are set to not include padding
         # we need to add the padding back to the index
-        offset = self.slice_width // 2
+        if self.slice_width == 1:
+            offset = 0
+        else:
+            offset = self.slice_width // 2
         slice_idx += offset
         start_idx = slice_idx - offset
-        end_idx = slice_idx + offset
+        # end_idx is exclusive so add 1
+        end_idx = slice_idx + offset + 1
 
         if self.slice_axis == 0:
             mri_slice = mri_scan[start_idx:end_idx, :, :]
