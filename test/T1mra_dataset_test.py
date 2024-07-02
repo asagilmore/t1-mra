@@ -56,10 +56,24 @@ def test_T1w2MraDataset():
     # length should account for padding
     assert len(test_dataset_len) == (100-4)
     mri, mra = test_dataset_len[0]
-    assert mri.shape == mra.shape
     assert mri.shape == (5, 512, 512)
+    assert mra.shape == (1, 512, 512)
 
     # check last index
     mri, mra = test_dataset_len[len(test_dataset_len) - 1]
-    assert mri.shape == mra.shape
     assert mri.shape == (5, 512, 512)
+    assert mra.shape == (1, 512, 512)
+
+    test_dataset_len = T1w2MraDataset(os.path.join(current_dir,
+                                                   'test_dataset_len', 'T1W'),
+                                      os.path.join(current_dir,
+                                                   'test_dataset_len', 'MRA'),
+                                      test_transform, slice_width=5,
+                                      width_labels=True)
+    # length should account for padding
+    assert len(test_dataset_len) == (100-4)
+    mri, mra = test_dataset_len[0]
+    assert mri.shape == (5, 512, 512)
+    assert mra.shape == (5, 512, 512)
+    assert mri.shape == mra.shape
+
