@@ -35,6 +35,7 @@ if __name__ == "__main__":
                         help="Minimum change to qualify as an improvement")
     parser.add_argument("--num_workers", type=int, default=-1, help="Number "
                         "of workers for dataloader")
+    parser.add_argument("--preload_dtype", type=str, default="float32",)
     args = parser.parse_args()
 
     # Early stopping parameters
@@ -73,10 +74,12 @@ if __name__ == "__main__":
     print(f'Loading datasets from {args.data_dir}')
     train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
                                    os.path.join(args.data_dir, "train", "MRA"),
-                                   transform=train_transform)
+                                   transform=train_transform,
+                                   preload_dtype=args.preload_dtype)
     valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
                                    os.path.join(args.data_dir, "valid", "MRA"),
-                                   transform=train_transform)
+                                   transform=train_transform,
+                                   preload_dtype=args.preload_dtype)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
                                   shuffle=True)
@@ -130,6 +133,7 @@ if __name__ == "__main__":
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()
             }, "model_checkpoint.pth")
+
         else:
             epochs_no_improve += 1
 
