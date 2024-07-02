@@ -110,7 +110,7 @@ if __name__ == "__main__":
     print(f'Starting training for {num_epochs} epochs')
     # training loop
     for epoch in range(start_epoch, num_epochs):
-        train_loss = train(model, train_dataloader, perceptual_loss,
+        train_loss = train(model, train_dataloader, perceptual_loss.get_loss,
                            optimizer, device)
         val_loss, val_acc = validate(model, valid_dataloader, perceptual_loss,
                                      device)
