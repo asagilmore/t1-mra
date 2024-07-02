@@ -1,5 +1,5 @@
-import random
 import torch
+import torchvision
 
 
 def train(model, loader, criterion, optimizer, device):
@@ -30,3 +30,22 @@ def validate(model, loader, criterion, device):
             preds = torch.argmax(outputs, dim=1)
             correct += (preds == labels).sum().item()
     return val_loss / len(loader), correct / len(loader.dataset)
+
+
+def tensorboard_write(writer, train_loss, val_loss, val_acc,
+                      epoch, model, val_loader, num_images=4):
+    writer.add_scalar('Loss/train', train_loss, global_step=epoch)
+    writer.add_scalar('Loss/val', val_loss, global_step=epoch)
+    writer.add_scalar('Accuracy/val', val_acc, global_step=epoch)
+
+    # get validation images
+    val_images, _ = next(iter(val_loader))
+    val_images = val_images[:num_images]
+    with torch.no_grad():
+        gen_images = model(val_images)
+
+    image_grid_original = torchvision.utils.make_grid(val_images)
+    image_grid_pred = torchvision.utils.make_grid(gen_images)
+
+    writer.add_image('Images/Original', image_grid_original, global_step=epoch)
+    writer.add_image('Images/Predicted', image_grid_pred, global_step=epoch)

@@ -9,13 +9,16 @@ import torchvision.transforms.v2 as v2
 import torch
 import torch.optim as optim
 from torch.nn import MSELoss
+from torch.utils.tensorboard import SummaryWriter
 
 from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from UNet import UNet
-from train_utils import train, validate
+from train_utils import train, validate, tensorboard_write
 
 if __name__ == "__main__":
+
+    writer = SummaryWriter()
 
     # Get training args
     parser = argparse.ArgumentParser()
@@ -123,6 +126,10 @@ if __name__ == "__main__":
               f"Val Acc: {val_acc}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
                      f"Val Loss: {val_loss}, Val Acc: {val_acc}")
+
+        # write to tensorboard
+        tensorboard_write(writer, train_loss, val_loss, val_acc, epoch+1,
+                          model, valid_dataloader)
 
         # save model checkpoint
         if best_val_loss - val_loss > min_delta:
