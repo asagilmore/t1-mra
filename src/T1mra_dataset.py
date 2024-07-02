@@ -6,7 +6,6 @@ import nibabel as nib
 from tqdm import tqdm
 import numpy as np
 from scipy.ndimage import zoom
-
 from misc_utils import get_matched_ids
 
 
@@ -113,9 +112,12 @@ class T1w2MraDataset(Dataset):
         '''
         Resamples the input image to the new shape
         '''
+        print(f'image datatype: {image.dtype}')
+        image = image.astype(np.float32)
         zoom_factors = [new_dim / old_dim for new_dim, old_dim in
                         zip(new_shape, image.shape)]
-        return zoom(image, zoom_factors, order=1)
+        reasampled_image = zoom(image, zoom_factors, order=1)
+        return reasampled_image.astype(self.preload_dtype)
 
     def _resample_scan_list(self, scan_size):
         if scan_size == 'most':
@@ -163,6 +165,10 @@ class T1w2MraDataset(Dataset):
                                                     dtype=self.preload_dtype)
 
             # update shape frequencies
+            if mri_scan.shape != mra_scan.shape:
+                raise ValueError(f"ID {id} has MRI shape {mri_scan.shape} "
+                                 f"and MRA shape {mra_scan.shape}. They "
+                                 "should be equal.")
             self._update_shape_frequencies(mri_scan.shape)
             self._update_shape_frequencies(mra_scan.shape)
 
