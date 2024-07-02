@@ -112,7 +112,6 @@ class T1w2MraDataset(Dataset):
         '''
         Resamples the input image to the new shape
         '''
-        print(f'image datatype: {image.dtype}')
         image = image.astype(np.float32)
         zoom_factors = [new_dim / old_dim for new_dim, old_dim in
                         zip(new_shape, image.shape)]
