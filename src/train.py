@@ -128,7 +128,8 @@ if __name__ == "__main__":
 
         tensorboard_write(writer, train_loss, val_loss, epoch+1,
                           model, valid_dataloader,
-                          num_images=args.batch_size)
+                          num_images=args.batch_size,
+                          adam_optim=optimizer)
 
         # save model checkpoint
         if best_val_loss - val_loss > min_delta:
