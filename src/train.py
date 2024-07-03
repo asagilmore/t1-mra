@@ -122,7 +122,7 @@ if __name__ == "__main__":
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
               f"Val Acc: {val_acc}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     "Val Loss: {val_loss}, Val Acc: {val_acc}")
+                     f"Val Loss: {val_loss}, Val Acc: {val_acc}")
 
         # save model checkpoint
         if best_val_loss - val_loss > min_delta:
