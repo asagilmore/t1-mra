@@ -1,19 +1,26 @@
 import sys
 import os
+
 import pytest
+import torch
+import torchvision.transforms.v2 as v2
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
                                              'src')))
 from T1mra_dataset import T1w2MraDataset  # noqa: E402
-from torchvision import transforms  # noqa: E402
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 def test_T1w2MraDataset():
-    test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+    test_transform = v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32),
+        v2.RandomApply([v2.RandomRotation(degrees=(90, 90))], p=0.5),
+        v2.RandomApply([v2.RandomRotation(degrees=(90, 90))], p=0.5),
+        v2.RandomApply([v2.RandomRotation(degrees=(90, 90))], p=0.5),
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.Normalize(mean=[0.5], std=[0.5])
     ])
     test_dataset_len = T1w2MraDataset(os.path.join(current_dir,
                                                    'test_dataset_len', 'T1W'),
