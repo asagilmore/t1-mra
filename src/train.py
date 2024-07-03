@@ -82,11 +82,13 @@ if __name__ == "__main__":
     train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
                                    os.path.join(args.data_dir, "train", "MRA"),
                                    transform=train_transform,
-                                   preload_dtype=args.preload_dtype)
+                                   preload_dtype=args.preload_dtype,
+                                   slice_width=5)
     valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
                                    os.path.join(args.data_dir, "valid", "MRA"),
                                    transform=train_transform,
-                                   preload_dtype=args.preload_dtype)
+                                   preload_dtype=args.preload_dtype,
+                                   slice_width=5)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
                                   shuffle=True)
