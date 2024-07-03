@@ -126,7 +126,7 @@ if __name__ == "__main__":
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
                      f"Val Loss: {val_loss}")
 
-        tensorboard_write(writer, train_loss, val_loss, epoch+1,
+        tensorboard_write(writer, device, train_loss, val_loss, epoch+1,
                           model, valid_dataloader,
                           num_images=args.batch_size,
                           adam_optim=optimizer)

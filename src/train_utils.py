@@ -29,7 +29,7 @@ def validate(model, loader, criterion, device):
     return val_loss / len(loader)
 
 
-def tensorboard_write(writer, train_loss, val_loss, epoch,
+def tensorboard_write(writer, device, train_loss, val_loss, epoch,
                       model, val_loader, num_images=4,
                       adam_optim=False):
     writer.add_scalar('Loss/train', train_loss, global_step=epoch)
@@ -50,15 +50,16 @@ def tensorboard_write(writer, train_loss, val_loss, epoch,
 
     # get validation images
     val_images, input_images = next(iter(val_loader))
+    val_images, input_images = val_images.to(device), input_images.to(device)
     input_images = input_images[:num_images]
     val_images = val_images[:num_images]
 
     with torch.no_grad():
         gen_images = model(val_images)
 
-    image_grid_original = torchvision.utils.make_grid(val_images)
-    image_grid_pred = torchvision.utils.make_grid(gen_images)
-    image_grid_input = torchvision.utils.make_grid(input_images)
+    image_grid_original = torchvision.utils.make_grid(val_images).cpu()
+    image_grid_pred = torchvision.utils.make_grid(gen_images).cpu()
+    image_grid_input = torchvision.utils.make_grid(input_images).cpu()
 
     writer.add_image('Images/Input', image_grid_input, global_step=epoch)
     writer.add_image('Images/Original', image_grid_original, global_step=epoch)
