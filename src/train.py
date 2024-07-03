@@ -119,10 +119,9 @@ if __name__ == "__main__":
         val_loss, val_acc = validate(model, valid_dataloader,
                                      perceptual_loss.get_loss, device)
 
-        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
-              f"Val Acc: {val_acc}")
+        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     f"Val Loss: {val_loss}, Val Acc: {val_acc}")
+                     f"Val Loss: {val_loss}")
 
         # save model checkpoint
         if best_val_loss - val_loss > min_delta:
