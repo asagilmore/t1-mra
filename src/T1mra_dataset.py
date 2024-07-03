@@ -97,8 +97,7 @@ class T1w2MraDataset(Dataset):
             mri_slice = mri_scan[:, :, slice_idx]
             mra_slice = mra_scan[:, :, slice_idx]
 
-        mri_slice = self.transform(mri_slice)
-        mra_slice = self.transform(mra_slice)
+        mri_slice, mra_slice = self.transform(mri_slice, mra_slice)
 
         return mri_slice, mra_slice
 

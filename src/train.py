@@ -5,7 +5,7 @@ import multiprocessing
 import psutil
 
 from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
+import torchvision.transforms.v2 as v2
 import torch
 import torch.optim as optim
 from torch.nn import MSELoss
@@ -13,9 +13,7 @@ from torch.nn import MSELoss
 from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from UNet import UNet
-from train_utils import (train, validate,
-                         RandomRotationTransform90, RandomFlipTransform)
-
+from train_utils import train, validate
 
 if __name__ == "__main__":
 
@@ -58,11 +56,14 @@ if __name__ == "__main__":
     perceptual_loss = PerceptualLoss(feature_extractor, MSELoss)
 
     # def transforms
-    train_transform = transforms.Compose([
-        transforms.ToTensor(),
-        RandomRotationTransform90(),
-        RandomFlipTransform(),
-        transforms.Normalize(mean=[0.5], std=[0.5])
+    train_transform = v2.Compose([
+        v2.ToImage(),
+        v2.ToDtype(torch.float32),
+        v2.RandomApply([v2.RandomRotation(degrees=(90, 90))], p=0.5),
+        v2.RandomApply([v2.RandomRotation(degrees=(90, 90))], p=0.5),
+        v2.RandomApply([v2.RandomRotation(degrees=(90, 90))], p=0.5),
+        v2.RandomHorizontalFlip(p=0.5),
+        v2.Normalize(mean=[0.5], std=[0.5])
     ])
     # check cpu count
     if args.num_workers == -1:
@@ -119,7 +120,7 @@ if __name__ == "__main__":
                                      perceptual_loss.get_loss, device)
 
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
-              "Val Acc: {val_acc}")
+              f"Val Acc: {val_acc}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
                      "Val Loss: {val_loss}, Val Acc: {val_acc}")
 

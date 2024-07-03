@@ -30,19 +30,3 @@ def validate(model, loader, criterion, device):
             preds = torch.argmax(outputs, dim=1)
             correct += (preds == labels).sum().item()
     return val_loss / len(loader), correct / len(loader.dataset)
-
-
-class RandomRotationTransform90:
-    def __call__(self, img):
-        rotations = random.randint(0, 3)
-        return torch.rot90(img, rotations, [1, 2])
-
-
-class RandomFlipTransform():
-    def __call__(self, img):
-        flip = random.random() > 0.5
-        axis = random.randint(1, 2)
-        if flip:
-            return torch.flip(img, [axis])
-        else:
-            return img
