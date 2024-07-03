@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, required=True, help="Dir "
                         "containing training data. "
                         "Must have train, valid, test subdirectories")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch"
+    parser.add_argument("--batch_size", type=int, default=20, help="Batch"
                         "size for training")
     parser.add_argument("--num_epochs", type=int, default=500, help="Number "
                         "of epochs")
@@ -119,17 +119,16 @@ if __name__ == "__main__":
     for epoch in range(start_epoch, num_epochs):
         train_loss = train(model, train_dataloader, perceptual_loss.get_loss,
                            optimizer, device)
-        val_loss, val_acc = validate(model, valid_dataloader,
-                                     perceptual_loss.get_loss, device)
+        val_loss = validate(model, valid_dataloader,
+                            perceptual_loss.get_loss, device)
 
-        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
-              f"Val Acc: {val_acc}")
+        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     f"Val Loss: {val_loss}, Val Acc: {val_acc}")
+                     f"Val Loss: {val_loss}")
 
-        # write to tensorboard
-        tensorboard_write(writer, train_loss, val_loss, val_acc, epoch+1,
-                          model, valid_dataloader)
+        tensorboard_write(writer, train_loss, val_loss, epoch+1,
+                          model, valid_dataloader,
+                          num_images=args.batch_size)
 
         # save model checkpoint
         if best_val_loss - val_loss > min_delta:
