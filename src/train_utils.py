@@ -43,9 +43,9 @@ def tensorboard_write(writer, train_loss, val_loss, epoch,
                               param_group['betas'][0], global_step=epoch)
             writer.add_scalar(f'Adam_optim/beta2_{i}',
                               param_group['betas'][1], global_step=epoch)
-            writer.add_scaler(f'Adam_optim/epsilon_{i}',
+            writer.add_scalar(f'Adam_optim/epsilon_{i}',
                               param_group['eps'], global_step=epoch)
-            writer.add_scaler(f'Adam_optim/weight_decay_{i}',
+            writer.add_scalar(f'Adam_optim/weight_decay_{i}',
                               param_group['weight_decay'], global_step=epoch)
 
     # get validation images
