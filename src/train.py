@@ -119,7 +119,7 @@ if __name__ == "__main__":
                                      perceptual_loss.get_loss, device)
 
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
-              "Val Acc: {val_acc}")
+              f"Val Acc: {val_acc}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
                      "Val Loss: {val_loss}, Val Acc: {val_acc}")
 
