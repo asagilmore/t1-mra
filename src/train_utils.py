@@ -1,4 +1,5 @@
 import torch
+import torchvision
 
 
 def train(model, loader, criterion, optimizer, device):
@@ -13,7 +14,7 @@ def train(model, loader, criterion, optimizer, device):
         optimizer.step()
 
         running_loss += loss.item()
-    return running_loss/len(loader)
+    return running_loss / len(loader)
 
 
 def validate(model, loader, criterion, device):
@@ -26,3 +27,48 @@ def validate(model, loader, criterion, device):
             loss = criterion(outputs, labels)
             val_loss += loss.item()
     return val_loss / len(loader)
+
+
+def tensorboard_write(writer, device, train_loss, val_loss, epoch,
+                      model, val_loader, num_images=4,
+                      adam_optim=False):
+    writer.add_scalar('Loss/train', train_loss, global_step=epoch)
+    writer.add_scalar('Loss/val', val_loss, global_step=epoch)
+
+    if adam_optim:
+        for i, param_group in enumerate(adam_optim.param_groups):
+            writer.add_scalar(f'Adam_optim/lr_{i}',
+                              param_group['lr'], global_step=epoch)
+            writer.add_scalar(f'Adam_optim/beta1_{i}',
+                              param_group['betas'][0], global_step=epoch)
+            writer.add_scalar(f'Adam_optim/beta2_{i}',
+                              param_group['betas'][1], global_step=epoch)
+            writer.add_scalar(f'Adam_optim/epsilon_{i}',
+                              param_group['eps'], global_step=epoch)
+            writer.add_scalar(f'Adam_optim/weight_decay_{i}',
+                              param_group['weight_decay'], global_step=epoch)
+
+    # get validation images
+    val_images, input_images = next(iter(val_loader))
+    val_images, input_images = val_images.to(device), input_images.to(device)
+    input_images = input_images[:num_images]
+    val_images = val_images[:num_images]
+
+    with torch.no_grad():
+        gen_images = model(val_images)
+
+    image_grid_original = grid_from_tensor(val_images)
+    image_grid_pred = grid_from_tensor(gen_images)
+    image_grid_input = grid_from_tensor(input_images)
+
+    writer.add_image('Images/Input', image_grid_input, global_step=epoch)
+    writer.add_image('Images/Original', image_grid_original, global_step=epoch)
+    writer.add_image('Images/Predicted', image_grid_pred, global_step=epoch)
+
+
+def grid_from_tensor(image_tensor, nrow=5):
+    image_grid = torchvision.utils.make_grid(image_tensor.cpu(), nrow=nrow)
+    min_val = torch.min(image_grid)
+    image_grid = (image_grid - min_val) / (torch.max(image_grid) - min_val)
+
+    return image_grid

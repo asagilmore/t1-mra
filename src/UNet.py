@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-# source: https://github.com/nikhilroxtomar/Semantic-Segmentation-Architecture/tree/main
+# source:
+# https://github.com/nikhilroxtomar/Semantic-Segmentation-Architecture/tree/main
 
 
 class conv_block(nn.Module):
