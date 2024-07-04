@@ -49,15 +49,15 @@ def tensorboard_write(writer, device, train_loss, val_loss, epoch,
                               param_group['weight_decay'], global_step=epoch)
 
     # get validation images
-    val_images, input_images = next(iter(val_loader))
-    val_images, input_images = val_images.to(device), input_images.to(device)
+    input_images, mask_images = next(iter(val_loader))
+    input_images, mask_images = input_images.to(device), mask_images.to(device)
     input_images = input_images[:num_images]
-    val_images = val_images[:num_images]
+    mask_images = mask_images[:num_images]
 
     with torch.no_grad():
-        gen_images = model(val_images)
+        gen_images = model(input_images)
 
-    image_grid_original = grid_from_tensor(val_images)
+    image_grid_original = grid_from_tensor(mask_images)
     image_grid_pred = grid_from_tensor(gen_images)
     image_grid_input = grid_from_tensor(input_images)
 
