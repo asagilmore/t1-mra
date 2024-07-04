@@ -1,5 +1,7 @@
 import torch
 import torchvision
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def train(model, loader, criterion, optimizer, device):
@@ -57,10 +59,18 @@ def tensorboard_write(writer, device, train_loss, val_loss, epoch,
     with torch.no_grad():
         gen_images = model(val_images)
 
-    image_grid_original = torchvision.utils.make_grid(val_images).cpu()
-    image_grid_pred = torchvision.utils.make_grid(gen_images).cpu()
-    image_grid_input = torchvision.utils.make_grid(input_images).cpu()
+    image_grid_original = grid_from_tensor(val_images)
+    image_grid_pred = grid_from_tensor(gen_images)
+    image_grid_input = grid_from_tensor(input_images)
 
     writer.add_image('Images/Input', image_grid_input, global_step=epoch)
     writer.add_image('Images/Original', image_grid_original, global_step=epoch)
     writer.add_image('Images/Predicted', image_grid_pred, global_step=epoch)
+
+
+def grid_from_tensor(image_tensor, nrow=5):
+    image_grid = torchvision.utils.make_grid(image_tensor.cpu(), nrow=nrow)
+    min_val = torch.min(image_grid)
+    image_grid = (image_grid - min_val) / (torch.max(image_grid) - min_val)
+
+    return image_grid
