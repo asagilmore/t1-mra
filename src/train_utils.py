@@ -1,7 +1,5 @@
 import torch
 import torchvision
-import matplotlib.pyplot as plt
-import numpy as np
 
 
 def train(model, loader, criterion, optimizer, device):
@@ -16,7 +14,7 @@ def train(model, loader, criterion, optimizer, device):
         optimizer.step()
 
         running_loss += loss.item()
-    return running_loss/len(loader)
+    return running_loss / len(loader)
 
 
 def validate(model, loader, criterion, device):
