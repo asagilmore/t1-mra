@@ -105,6 +105,9 @@ if __name__ == "__main__":
 
     # def optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
+                                                     factor=0.5, patience=10,
+                                                     verbose=True)
     num_epochs = args.num_epochs
 
     # load checkpoint if exists
@@ -126,9 +129,12 @@ if __name__ == "__main__":
         val_loss = validate(model, valid_dataloader,
                             perceptual_loss.get_loss, device)
 
+        scheduler.step(val_loss)
+
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     f"Val Loss: {val_loss}")
+                     f"Val Loss: {val_loss}"
+                     f"LR: {optimizer.param_groups[0]['lr']}")
 
         tensorboard_write(writer, device, train_loss, val_loss, epoch+1,
                           model, valid_dataloader,
