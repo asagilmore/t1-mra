@@ -38,13 +38,16 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=-1, help="Number "
                         "of workers for dataloader")
     parser.add_argument("--preload_dtype", type=str, default="float32",)
+    parser.add_argument("--early_stopping", type=bool, default=False,
+                        help="Use early stopping")
     args = parser.parse_args()
 
     # Early stopping parameters
-    patience = args.patience
-    min_delta = args.min_delta
-    best_val_loss = float('inf')
-    epochs_no_improve = 0
+    if args.early_stopping:
+        patience = args.patience
+        min_delta = args.min_delta
+        best_val_loss = float('inf')
+        epochs_no_improve = 0
 
     # logging
     logging.basicConfig(filename='training.log', level=logging.INFO,
@@ -133,20 +136,27 @@ if __name__ == "__main__":
                           adam_optim=optimizer)
 
         # save model checkpoint
-        if best_val_loss - val_loss > min_delta:
-            best_val_loss = val_loss
-            epochs_no_improve = 0
+        if args.early_stopping:
+            if best_val_loss - val_loss > min_delta:
+                best_val_loss = val_loss
+                epochs_no_improve = 0
 
+                torch.save({
+                    'epoch': epoch+1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                }, "model_checkpoint.pth")
+
+            else:
+                epochs_no_improve += 1
+
+            if epochs_no_improve == patience:
+                print("Early stopping")
+                logging.info(f'Early stopping at epoch {epoch+1}')
+                break
+        else:
             torch.save({
                 'epoch': epoch+1,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()
             }, "model_checkpoint.pth")
-
-        else:
-            epochs_no_improve += 1
-
-        if epochs_no_improve == patience:
-            print("Early stopping")
-            logging.info("Early stopping at epoch {epoch+1}")
-            break
