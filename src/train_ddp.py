@@ -178,6 +178,6 @@ if __name__ == "__main__":
     train_args = (world_size, args.num_epochs, args.batch_size,
                   args.data_dir, args.lr, args.num_workers,
                   args.preload_dtype)
-    print(f"Running DDP with {world_size} GPUs"
+    print(f"Running DDP with {world_size} GPUs, "
           f"Training for {args.num_epochs} epochs")
     mp.spawn(train, args=train_args, nprocs=world_size, join=True)
