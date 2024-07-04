@@ -102,7 +102,7 @@ def train(rank, world_size, epochs, batch_size,
     feature_extractor.to(rank)
     perceptual_loss = PerceptualLoss(feature_extractor, MSELoss)
 
-    criterion = perceptual_loss.get_loss().to(rank)
+    criterion = perceptual_loss.get_loss.to(rank)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
                                                      factor=0.5, patience=5)
