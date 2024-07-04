@@ -29,7 +29,8 @@ if __name__ == "__main__":
                         "size for training")
     parser.add_argument("--num_epochs", type=int, default=500, help="Number "
                         "of epochs")
-    parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--lr", type=float, default=0.001,
+                        help="Learning rate")
     parser.add_argument("--patience", type=int, default=10, help="Number "
                         "of epochs to wait for improvement before stopping")
     parser.add_argument("--min_delta", type=float, default=0.001,

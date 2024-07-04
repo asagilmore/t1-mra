@@ -71,7 +71,7 @@ class T1w2MraDataset(Dataset):
 
         scan_to_use = None
         for scan in self.scan_list:
-            if idx <= scan.get("last_index") and idx >= scan.get("first_index"):
+            if scan.get("first_index") <= idx <= scan.get("last_index"):
                 scan_to_use = scan
                 break
 
@@ -204,7 +204,8 @@ class T1w2MraDataset(Dataset):
             first_index = slices
             slices += result.get('slices')
             last_index = slices - 1
-            scan_list.append({'mri': result.get('mri'), 'mra': result.get('mra'),
+            scan_list.append({'mri': result.get('mri'),
+                              'mra': result.get('mra'),
                               'last_index': last_index,
                               'first_index': first_index})
 
@@ -214,7 +215,8 @@ class T1w2MraDataset(Dataset):
         '''
         Returns the number of slices for the MRI image input
         '''
-        # Check if scan is a filepath (string), then load it; otherwise, use it directly
+        # Check if scan is a filepath (string), then load it; otherwise,
+        # use it directly
         if isinstance(scan, str):
             scan_data = nib.load(scan).get_fdata()
         else:
