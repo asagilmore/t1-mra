@@ -176,9 +176,9 @@ if __name__ == "__main__":
         raise RuntimeError("No GPUs available"
                            "cuda is required for DDP")
 
-    args = (world_size, args.num_epochs, args.batch_size,
-            args.data_dir, args.lr, args.num_workers,
-            args.preload_dtype, writer)
+    train_args = (world_size, args.num_epochs, args.batch_size,
+                  args.data_dir, args.lr, args.num_workers,
+                  args.preload_dtype, writer)
     print(f"Running DDP with {world_size} GPUs"
           f"Training for {args.num_epochs} epochs")
-    mp.spawn(train, args=args, nprocs=world_size, join=True)
+    mp.spawn(train, args=train_args, nprocs=world_size, join=True)
