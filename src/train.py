@@ -40,6 +40,8 @@ if __name__ == "__main__":
     parser.add_argument("--preload_dtype", type=str, default="float32",)
     parser.add_argument("--early_stopping", type=bool, default=False,
                         help="Use early stopping")
+    parser.add_argument("--force_single_gpus", type=bool, default=False,
+                        help="Force single GPU usage")
     args = parser.parse_args()
 
     # Early stopping parameters
@@ -101,6 +103,16 @@ if __name__ == "__main__":
 
     # def model
     model = UNet(1, 1)
+
+    if args.force_single_gpus:
+        gpu_count = 1
+    else:
+        gpu_count = torch.cuda.device_count()
+        print(f"Found {gpu_count} GPUs")
+        if gpu_count > 1:
+            model = torch.nn.DataParallel(model)
+            print(f"Using DataParallel with {gpu_count} GPUs")
+
     model.to(device)
 
     # def optimizer
