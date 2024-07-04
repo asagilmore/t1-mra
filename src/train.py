@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     f"Val Loss: {val_loss}"
+                     f"Val Loss: {val_loss} "
                      f"LR: {scheduler.get_last_lr()}")
 
         tensorboard_write(writer, device, train_loss, val_loss, epoch+1,
