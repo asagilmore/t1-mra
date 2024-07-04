@@ -1,6 +1,5 @@
 import argparse
 import os
-import logging
 
 from torch.utils.data import DataLoader, DistributedSampler
 import torchvision.transforms.v2 as v2
@@ -82,7 +81,7 @@ def validate(rank, model, val_loader, criterion):
 
 def train(rank, world_size, epochs, batch_size,
           data_dir, lr, num_workers, preload_dtype,
-          start_epoch=0, writer=None):
+          start_epoch=0):
 
     setup(rank, world_size)
 
@@ -107,6 +106,9 @@ def train(rank, world_size, epochs, batch_size,
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
                                                      factor=0.5, patience=5)
+
+    if rank == 0:
+        writer = SummaryWriter()
 
     for epoch in range(start_epoch, epochs):
         train_dataloader.sampler.set_epoch(epoch)
@@ -143,16 +145,13 @@ def train(rank, world_size, epochs, batch_size,
                 else None,
             }, "model_checkpoint.pth")
 
-            if writer:
-                tensorboard_write(writer, rank, loss, val_loss, epoch+1,
-                                  model, valid_dataloader,
-                                  num_images=10,
-                                  adam_optim=optimizer)
+            tensorboard_write(writer, rank, loss, val_loss, epoch+1,
+                              model, valid_dataloader,
+                              num_images=10,
+                              adam_optim=optimizer)
 
 
 if __name__ == "__main__":
-
-    writer = SummaryWriter()
 
     # Get training args
     parser = argparse.ArgumentParser()
@@ -178,7 +177,7 @@ if __name__ == "__main__":
 
     train_args = (world_size, args.num_epochs, args.batch_size,
                   args.data_dir, args.lr, args.num_workers,
-                  args.preload_dtype, writer)
+                  args.preload_dtype)
     print(f"Running DDP with {world_size} GPUs"
           f"Training for {args.num_epochs} epochs")
     mp.spawn(train, args=train_args, nprocs=world_size, join=True)
