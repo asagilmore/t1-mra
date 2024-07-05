@@ -1,5 +1,6 @@
 import argparse
 import os
+import logging
 
 from torch.utils.data import DataLoader, DistributedSampler
 import torchvision.transforms.v2 as v2
@@ -109,6 +110,8 @@ def train(rank, world_size, epochs, batch_size,
 
     if rank == 0:
         writer = SummaryWriter()
+        logging.basicConfig(filename='training.log', level=logging.INFO,
+                            format='%(asctime)s:%(levelname)s:%(message)s')
 
     for epoch in range(start_epoch, epochs):
         train_dataloader.sampler.set_epoch(epoch)
@@ -148,6 +151,9 @@ def train(rank, world_size, epochs, batch_size,
                               ddp_model, valid_dataloader,
                               num_images=10,
                               adam_optim=optimizer)
+
+            logging.info(f"Epoch {epoch+1}, Loss: {loss}, "
+                         f"Val Loss: {val_loss} ")
 
 
 if __name__ == "__main__":
