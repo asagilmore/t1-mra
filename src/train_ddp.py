@@ -127,8 +127,7 @@ def train(rank, world_size, epochs, batch_size,
         if rank == 0:
             scheduler.step(val_loss)
             print(f"Epoch {epoch}, Loss: {loss}"
-                  f"Val Loss: {val_loss}"
-                  f"LR: {scheduler._get_last_lr()}")
+                  f"Val Loss: {val_loss}")
 
         for param_group in optimizer.param_groups:
             lr_tensor = torch.tensor(param_group['lr'],
