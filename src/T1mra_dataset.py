@@ -64,23 +64,9 @@ class T1w2MraDataset(Dataset):
         else:
             return 0
 
-    def __getitem__(self, idx):
-        # handle negative indexing
-        if idx < 0:
-            idx = len(self) + idx
+    def __getitem__(self, id):
 
-        scan_to_use = None
-        for scan in self.scan_list:
-            if idx <= scan.get("last_index") and idx >= scan.get("first_index"):
-                scan_to_use = scan
-                break
-
-        if scan_to_use is None:
-            raise IndexError(f"Index {idx} out of range for dataset")
-
-        slice_index = scan_to_use.get("first_index") - idx
-
-        return self._get_slices(scan_to_use, slice_index)
+        return self._load_scan(id)
 
     def _get_slices(self, scan_object, slice_idx):
 
@@ -88,18 +74,16 @@ class T1w2MraDataset(Dataset):
         mra_scan = scan_object.get("mra")
 
         if self.slice_axis == 0:
-            mri_slice = mri_scan[slice_idx, :, :]
-            mra_slice = mra_scan[slice_idx, :, :]
+            mri_slices = mri_scan[slice_idx, :, :]
+            mra_slices = mra_scan[slice_idx, :, :]
         elif self.slice_axis == 1:
-            mri_slice = mri_scan[:, slice_idx, :]
-            mra_slice = mra_scan[:, slice_idx, :]
+            mri_slices = mri_scan[:, slice_idx, :]
+            mra_slices = mra_scan[:, slice_idx, :]
         elif self.slice_axis == 2:
-            mri_slice = mri_scan[:, :, slice_idx]
-            mra_slice = mra_scan[:, :, slice_idx]
-
-        mri_slice, mra_slice = self.transform(mri_slice, mra_slice)
-
-        return mri_slice, mra_slice
+            mri_slices = mri_scan[:, :, slice_idx]
+            mra_slices = mra_scan[:, :, slice_idx]
+  
+        return mri_slices, mra_slices
 
     def _update_shape_frequencies(self, shape):
         if shape not in self.shape_frequencies:

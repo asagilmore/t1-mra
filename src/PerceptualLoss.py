@@ -23,10 +23,12 @@ class PerceptualLoss():
         self.feature_extractor = feature_extractor
         self.loss_criterion = nn.MSELoss()
 
-    def get_loss(self, output, target):
+    def get_loss(self, output, target,z_idx):
         rgb_output = output.expand(-1, 3, -1, -1)
         rgb_target = target.expand(-1, 3, -1, -1)
         out_features = self.feature_extractor(rgb_output)
+        for x_slices in output:
+
         target_features = self.feature_extractor(rgb_target)
 
         return self.loss_criterion(out_features, target_features)

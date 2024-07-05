@@ -13,7 +13,7 @@ from torch.nn import MSELoss
 from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from UNet import UNet
-from train_utils import train, validate
+from train_utils import train
 
 if __name__ == "__main__":
 
@@ -81,11 +81,9 @@ if __name__ == "__main__":
                                    os.path.join(args.data_dir, "valid", "MRA"),
                                    transform=train_transform,
                                    preload_dtype=args.preload_dtype)
-
+    
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
                                   shuffle=True)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size,
-                                  shuffle=False)
 
     # Print current memory usage
     process = psutil.Process(os.getpid())
@@ -116,29 +114,6 @@ if __name__ == "__main__":
     for epoch in range(start_epoch, num_epochs):
         train_loss = train(model, train_dataloader, perceptual_loss.get_loss,
                            optimizer, device)
-        val_loss, val_acc = validate(model, valid_dataloader,
-                                     perceptual_loss.get_loss, device)
 
-        print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}, "
-              f"Val Acc: {val_acc}")
-        logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     "Val Loss: {val_loss}, Val Acc: {val_acc}")
-
-        # save model checkpoint
-        if best_val_loss - val_loss > min_delta:
-            best_val_loss = val_loss
-            epochs_no_improve = 0
-
-            torch.save({
-                'epoch': epoch+1,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict()
-            }, "model_checkpoint.pth")
-
-        else:
-            epochs_no_improve += 1
-
-        if epochs_no_improve == patience:
-            print("Early stopping")
-            logging.info("Early stopping at epoch {epoch+1}")
-            break
+        print(f"Epoch {epoch+1}, Loss: {train_loss}")
+        logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, ")
