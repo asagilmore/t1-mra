@@ -103,7 +103,7 @@ def train(rank, world_size, epochs, batch_size,
     perceptual_loss = PerceptualLoss(feature_extractor, MSELoss)
 
     criterion = perceptual_loss.get_loss
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(ddp_model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
                                                      factor=0.5, patience=5)
 
@@ -138,14 +138,14 @@ def train(rank, world_size, epochs, batch_size,
         if rank == 0:
             torch.save({
                 'epoch': epoch+1,
-                'model_state_dict': model.module.state_dict(),
+                'model_state_dict': ddp_model.module.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict() if scheduler
                 else None,
             }, "model_checkpoint.pth")
 
             tensorboard_write(writer, rank, loss, val_loss, epoch+1,
-                              model, valid_dataloader,
+                              ddp_model, valid_dataloader,
                               num_images=10,
                               adam_optim=optimizer)
 
