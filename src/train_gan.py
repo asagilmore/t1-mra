@@ -1,8 +1,6 @@
 import argparse
 import os
 import logging
-import multiprocessing
-import psutil
 
 from torch.utils.data import DataLoader
 import torchvision.transforms.v2 as v2
@@ -15,7 +13,6 @@ from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from Critic import Critic, gradient_penalty
 from UNet import UNet
-from train_utils import train, validate, tensorboard_write
 
 if __name__ == "__main__":
 
@@ -30,10 +27,6 @@ if __name__ == "__main__":
                         "size for training")
     parser.add_argument("--num_epochs", type=int, default=500, help="Number "
                         "of epochs")
-    parser.add_argument("--lr", type=float, default=0.001,
-                        help="Learning rate")
-    parser.add_argument("--patience", type=int, default=10, help="Number "
-                        "of epochs to wait for improvement before stopping")
     parser.add_argument("--preload_dtype", type=str, default="float32",)
     args = parser.parse_args()
 
@@ -83,7 +76,7 @@ if __name__ == "__main__":
     b2 = 0.999
     lambda_gp = 10
 
-    #identity loss weight
+    # identity loss weight
     identity_weight = 0.1
 
     gen_optimizer = optim.Adam(generator_model.parameters(), lr=learning_rate,
@@ -133,3 +126,7 @@ if __name__ == "__main__":
             print(f"Epoch {epoch} Gen Loss: {gen_loss.item()} Critic Loss: "
                   f"{critic_loss.item()} Identity Loss: "
                   f"{identity_loss.item()}")
+
+            logging.info(f"Epoch {epoch} Gen Loss: {gen_loss.item()} "
+                         f"Critic Loss: {critic_loss.item()} Identity Loss: "
+                         f"{identity_loss.item()}")
