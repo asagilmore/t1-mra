@@ -38,13 +38,18 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=-1, help="Number "
                         "of workers for dataloader")
     parser.add_argument("--preload_dtype", type=str, default="float32",)
+    parser.add_argument("--early_stopping", type=bool, default=False,
+                        help="Use early stopping")
+    parser.add_argument("--force_single_gpus", type=bool, default=False,
+                        help="Force single GPU usage")
     args = parser.parse_args()
 
     # Early stopping parameters
-    patience = args.patience
-    min_delta = args.min_delta
-    best_val_loss = float('inf')
-    epochs_no_improve = 0
+    if args.early_stopping:
+        patience = args.patience
+        min_delta = args.min_delta
+        best_val_loss = float('inf')
+        epochs_no_improve = 0
 
     # logging
     logging.basicConfig(filename='training.log', level=logging.INFO,
@@ -98,10 +103,22 @@ if __name__ == "__main__":
 
     # def model
     model = UNet(1, 1)
+
+    if args.force_single_gpus:
+        gpu_count = 1
+    else:
+        gpu_count = torch.cuda.device_count()
+        print(f"Found {gpu_count} GPUs")
+        if gpu_count > 1:
+            model = torch.nn.DataParallel(model)
+            print(f"Using DataParallel with {gpu_count} GPUs")
+
     model.to(device)
 
     # def optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
+                                                     factor=0.5, patience=10)
     num_epochs = args.num_epochs
 
     # load checkpoint if exists
@@ -123,9 +140,12 @@ if __name__ == "__main__":
         val_loss = validate(model, valid_dataloader,
                             perceptual_loss.get_loss, device)
 
+        scheduler.step(val_loss)
+
         print(f"Epoch {epoch+1}, Loss: {train_loss}, Val Loss: {val_loss}")
         logging.info(f"Epoch {epoch+1}, Loss: {train_loss}, "
-                     f"Val Loss: {val_loss}")
+                     f"Val Loss: {val_loss} "
+                     f"LR: {scheduler.get_last_lr()}")
 
         tensorboard_write(writer, device, train_loss, val_loss, epoch+1,
                           model, valid_dataloader,
@@ -133,20 +153,27 @@ if __name__ == "__main__":
                           adam_optim=optimizer)
 
         # save model checkpoint
-        if best_val_loss - val_loss > min_delta:
-            best_val_loss = val_loss
-            epochs_no_improve = 0
+        if args.early_stopping:
+            if best_val_loss - val_loss > min_delta:
+                best_val_loss = val_loss
+                epochs_no_improve = 0
 
+                torch.save({
+                    'epoch': epoch+1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()
+                }, "model_checkpoint.pth")
+
+            else:
+                epochs_no_improve += 1
+
+            if epochs_no_improve == patience:
+                print("Early stopping")
+                logging.info(f'Early stopping at epoch {epoch+1}')
+                break
+        else:
             torch.save({
                 'epoch': epoch+1,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict()
             }, "model_checkpoint.pth")
-
-        else:
-            epochs_no_improve += 1
-
-        if epochs_no_improve == patience:
-            print("Early stopping")
-            logging.info("Early stopping at epoch {epoch+1}")
-            break
