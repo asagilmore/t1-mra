@@ -2,6 +2,12 @@ import torch
 import torchvision
 
 
+class RandomRotation90(torch.nn.Module):
+    def forward(self, img, mask):
+        k = torch.randint(0, 4, (1,)).item()
+        return torch.rot90(img, k, [1, 2]), torch.rot90(mask, k, [1, 2])
+
+
 def train(model, loader, criterion, optimizer, device):
     model.train()
     running_loss = 0.0
@@ -72,3 +78,4 @@ def grid_from_tensor(image_tensor, nrow=5):
     image_grid = (image_grid - min_val) / (torch.max(image_grid) - min_val)
 
     return image_grid
+
