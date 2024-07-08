@@ -64,6 +64,11 @@ if __name__ == "__main__":
         v2.Normalize(mean=[0.5], std=[0.5])
     ])
 
+    # transform to be used on outputs of generator
+    critic_transform = v2.Compose([
+        v2.Normalize(mean=[0.5], std=[0.5])
+    ])
+
     # setup perceptual loss for identity loss
     feature_extractor = VGG16FeatureExtractor()
     feature_extractor.to(device)
@@ -105,6 +110,17 @@ if __name__ == "__main__":
     critic_optimizer = optim.Adam(critic_model.parameters(), lr=learning_rate,
                                   betas=(b1, b2))
 
+    if not os.path.exists("model_checkpoint.pth"):
+        epoch = 0
+    else:
+        checkpoint = torch.load("model_checkpoint.pth")
+        generator_model.load_state_dict(checkpoint['gen_model_state_dict'])
+        critic_model.load_state_dict(checkpoint['critic_model_state_dict'])
+        gen_optimizer.load_state_dict(checkpoint['gen_optimizer_state_dict'])
+        critic_optimizer.load_state_dict(
+                         checkpoint['critic_optimizer_state_dict'])
+        epoch = checkpoint['epoch']
+
     for epoch in range(args.num_epochs):
 
         for gen_batch, critic_batch in zip(train_gen_dataloader,
@@ -117,6 +133,7 @@ if __name__ == "__main__":
             real_masks = real_masks.to(device)
 
             fake_masks = generator_model(real_inputs)
+            fake_masks = critic_transform(fake_masks)
 
             real_concat = torch.cat([real_inputs, real_masks], dim=1)
             fake_concat = torch.cat([real_inputs, fake_masks], dim=1)
@@ -165,6 +182,15 @@ if __name__ == "__main__":
 
     generator_model.eval()
     critic_model.eval()
+
+    torch.save({
+        'epoch': epoch+1,
+        'gen_model_state_dict': generator_model.state_dict(),
+        'critic_model_state_dict': critic_model.state_dict(),
+        'gen_optimizer_state_dict': gen_optimizer.state_dict(),
+        'critic_optimizer_state_dict': critic_optimizer.state_dict()
+    }, "model_checkpoint.pth")
+
     running_critic_loss = 0.0
     running_gen_loss = 0.0
     running_identity_loss = 0.0
@@ -198,5 +224,5 @@ if __name__ == "__main__":
     running_identity_loss /= len(valid_dataloader)
 
     validation_logger.info(f"Gen Critic Loss: {running_gen_loss} "
-                            f"Gen Ident Loss: {running_identity_loss} "
-                            f"Critic Loss: {running_critic_loss} ")
+                           f"Gen Ident Loss: {running_identity_loss} "
+                           f"Critic Loss: {running_critic_loss} ")
