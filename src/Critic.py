@@ -4,7 +4,7 @@ import torch
 
 class Critic(nn.Module):
     def __init__(self, in_channels):
-        super.__init__()
+        super().__init__()
         self.model = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=4, stride=2, padding=1),
             nn.GELU(),

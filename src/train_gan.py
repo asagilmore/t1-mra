@@ -62,8 +62,12 @@ if __name__ == "__main__":
                                    transform=train_transform,
                                    preload_dtype=args.preload_dtype)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
-                                  shuffle=True)
+    train_gen_dataloader = DataLoader(train_dataset,
+                                      batch_size=args.batch_size,
+                                      shuffle=True)
+    train_critic_dataloader = DataLoader(train_dataset,
+                                         batch_size=args.batch_size,
+                                         shuffle=True)
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size,
                                   shuffle=False)
 
@@ -86,9 +90,11 @@ if __name__ == "__main__":
 
     for epoch in range(args.num_epochs):
 
-        for real_inputs, real_masks in train_dataloader:
-
+        for gen_batch, critic_batch in zip(train_gen_dataloader,
+                                           train_critic_dataloader):
             # Train critic
+
+            real_inputs, real_masks = gen_batch
             real_inputs = real_inputs.to(device)
             real_masks = real_masks.to(device)
 
@@ -112,8 +118,14 @@ if __name__ == "__main__":
             critic_optimizer.step()
 
             # Train generator
+
+            real_inputs, real_masks = critic_batch
+            real_inputs = real_inputs.to(device)
+            real_masks = real_masks.to(device)
+
             gen_optimizer.zero_grad()
-            # fake_masks already generated above
+            fake_masks = generator_model(real_inputs)
+            fake_concat = torch.cat([real_inputs, fake_masks], dim=1)
             critic_validity = critic_model(fake_concat)
             gen_critic_loss = -torch.mean(critic_validity)
 
