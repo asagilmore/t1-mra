@@ -31,12 +31,30 @@ if __name__ == "__main__":
     parser.add_argument("--preload_dtype", type=str, default="float32",)
     args = parser.parse_args()
 
-    logging.basicConfig(filename='training.log', level=logging.INFO,
-                        format='%(asctime)s:%(levelname)s:%(message)s')
+    train_logger = logging.getLogger('train_logger')
+    train_logger.setLevel(logging.INFO)
+    train_file_handler = logging.FileHandler('training.log')
+    train_file_handler.setLevel(logging.INFO)
+    train_file_handler.setFormatter(
+        logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
+    train_logger.addHandler(train_file_handler)
+
+    # Setup for the second logger (e.g., for validation logs)
+    validation_logger = logging.getLogger('validation_logger')
+    validation_logger.setLevel(logging.INFO)
+    validation_file_handler = logging.FileHandler('validation.log')
+    validation_file_handler.setLevel(logging.INFO)
+    validation_file_handler.setFormatter(
+        logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
+    validation_logger.addHandler(validation_file_handler)
+
+    # Example usage
+    train_logger.info("Started Logging train")
+    validation_logger.info("Started Logging validation")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
-    logging.info(f"Using device: {device}")
+    train_logger.info(f"Using device: {device}")
 
     train_transform = v2.Compose([
         v2.ToImage(),
@@ -92,7 +110,8 @@ if __name__ == "__main__":
         for gen_batch, critic_batch in zip(train_gen_dataloader,
                                            train_critic_dataloader):
             # Train critic
-
+            generator_model.eval()
+            critic_model.train()
             real_inputs, real_masks = gen_batch
             real_inputs = real_inputs.to(device)
             real_masks = real_masks.to(device)
@@ -117,6 +136,8 @@ if __name__ == "__main__":
             critic_optimizer.step()
 
             # Train generator
+            generator_model.train()
+            critic_model.eval()
 
             real_inputs, real_masks = critic_batch
             real_inputs = real_inputs.to(device)
@@ -138,6 +159,44 @@ if __name__ == "__main__":
                   f"{critic_loss.item()} Identity Loss: "
                   f"{identity_loss.item()}")
 
-            logging.info(f"Epoch {epoch} Gen Loss: {gen_loss.item()} "
-                         f"Critic Loss: {critic_loss.item()} Identity Loss: "
-                         f"{identity_loss.item()}")
+            train_logger.info(f"Epoch {epoch} Gen Loss: {gen_loss.item()} "
+                              f"Critic Loss: {critic_loss.item()} "
+                              f"Identity Loss: {identity_loss.item()}")
+
+    generator_model.eval()
+    critic_model.eval()
+    running_critic_loss = 0.0
+    running_gen_loss = 0.0
+    running_identity_loss = 0.0
+    for image, mask in valid_dataloader:
+        image = image.to(device)
+        mask = mask.to(device)
+        with torch.no_grad():
+            fake_mask = generator_model(image)
+            real_concat = torch.cat([image, mask], dim=1)
+            fake_concat = torch.cat([image, fake_mask], dim=1)
+
+            real_validity = critic_model(real_concat)
+            fake_validity = critic_model(fake_concat)
+
+            critic_loss = -torch.mean(real_validity) + torch.mean(
+                                                     fake_validity)
+
+            perceptual_loss = perceptual_loss.get_loss(fake_mask, mask)
+
+            second_output = generator_model(fake_mask)
+            gen_identity_loss = perceptual_loss.get_loss(second_output, mask)
+
+            gen_critic_loss = -torch.mean(fake_validity)
+
+            running_critic_loss += critic_loss.item()
+            running_gen_loss += gen_critic_loss.item()
+            running_identity_loss += gen_identity_loss.item()
+
+    running_critic_loss /= len(valid_dataloader)
+    running_gen_loss /= len(valid_dataloader)
+    running_identity_loss /= len(valid_dataloader)
+
+    validation_logger.info(f"Gen Critic Loss: {running_gen_loss} "
+                            f"Gen Ident Loss: {running_identity_loss} "
+                            f"Critic Loss: {running_critic_loss} ")
