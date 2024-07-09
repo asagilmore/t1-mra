@@ -14,7 +14,7 @@ from torch.utils.tensorboard import SummaryWriter
 from T1mra_dataset import T1w2MraDataset
 from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
 from UNet import UNet
-from train_utils import train, validate, tensorboard_write, RandomRoataion90
+from train_utils import train, validate, tensorboard_write, RandomRotation90
 
 if __name__ == "__main__":
 
@@ -68,8 +68,7 @@ if __name__ == "__main__":
     train_transform = v2.Compose([
         v2.ToImage(),
         v2.ToDtype(torch.float32),
-        RandomRoataion90(),
-        v2.RandomHorizontalFlip(p=0.5),
+        RandomRotation90(),
         v2.Normalize(mean=[0.5], std=[0.5])
     ])
     # check cpu count
