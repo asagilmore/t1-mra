@@ -240,9 +240,9 @@ class T1w2MraDataset(Dataset):
             padding = self.slice_width // 2
         for i, result in enumerate(result_list):
             first_index = slices
-            slices += result.get('slices')
+            slices += result.get('slices') - (padding*2)
             # add padding
-            last_index = slices - 1 - (padding*2)
+            last_index = slices - 1
             scan_list.append({'mri': result.get('mri'),
                               'mra': result.get('mra'),
                               'last_index': last_index,
