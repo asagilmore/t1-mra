@@ -60,7 +60,6 @@ if __name__ == "__main__":
         v2.ToImage(),
         v2.ToDtype(torch.float32),
         RandomRotation90(),
-        v2.RandomHorizontalFlip(p=0.5),
         v2.Normalize(mean=[0.5], std=[0.5])
     ])
 
