@@ -179,49 +179,49 @@ if __name__ == "__main__":
                               f"Critic Loss: {critic_loss.item()} "
                               f"Identity Loss: {identity_loss.item()}")
 
-    generator_model.eval()
-    critic_model.eval()
+        generator_model.eval()
+        critic_model.eval()
 
-    torch.save({
-        'epoch': epoch+1,
-        'gen_model_state_dict': generator_model.state_dict(),
-        'critic_model_state_dict': critic_model.state_dict(),
-        'gen_optimizer_state_dict': gen_optimizer.state_dict(),
-        'critic_optimizer_state_dict': critic_optimizer.state_dict()
-    }, "model_checkpoint.pth")
+        torch.save({
+            'epoch': epoch+1,
+            'gen_model_state_dict': generator_model.state_dict(),
+            'critic_model_state_dict': critic_model.state_dict(),
+            'gen_optimizer_state_dict': gen_optimizer.state_dict(),
+            'critic_optimizer_state_dict': critic_optimizer.state_dict()
+        }, "model_checkpoint.pth")
 
-    running_critic_loss = 0.0
-    running_gen_loss = 0.0
-    running_identity_loss = 0.0
-    for image, mask in valid_dataloader:
-        image = image.to(device)
-        mask = mask.to(device)
-        with torch.no_grad():
-            fake_mask = generator_model(image)
-            real_concat = torch.cat([image, mask], dim=1)
-            fake_concat = torch.cat([image, fake_mask], dim=1)
+        running_critic_loss = 0.0
+        running_gen_loss = 0.0
+        running_identity_loss = 0.0
+        for image, mask in valid_dataloader:
+            image = image.to(device)
+            mask = mask.to(device)
+            with torch.no_grad():
+                fake_mask = generator_model(image)
+                real_concat = torch.cat([image, mask], dim=1)
+                fake_concat = torch.cat([image, fake_mask], dim=1)
 
-            real_validity = critic_model(real_concat)
-            fake_validity = critic_model(fake_concat)
+                real_validity = critic_model(real_concat)
+                fake_validity = critic_model(fake_concat)
 
-            critic_loss = -torch.mean(real_validity) + torch.mean(
-                                                     fake_validity)
+                critic_loss = -torch.mean(real_validity) + torch.mean(
+                                                        fake_validity)
 
-            perceptual_loss = perceptual_loss.get_loss(fake_mask, mask)
+                perceptual_loss = perceptual_loss.get_loss(fake_mask, mask)
 
-            second_output = generator_model(fake_mask)
-            gen_identity_loss = perceptual_loss.get_loss(second_output, mask)
+                second_output = generator_model(fake_mask)
+                gen_identity_loss = perceptual_loss.get_loss(second_output, mask)
 
-            gen_critic_loss = -torch.mean(fake_validity)
+                gen_critic_loss = -torch.mean(fake_validity)
 
-            running_critic_loss += critic_loss.item()
-            running_gen_loss += gen_critic_loss.item()
-            running_identity_loss += gen_identity_loss.item()
+                running_critic_loss += critic_loss.item()
+                running_gen_loss += gen_critic_loss.item()
+                running_identity_loss += gen_identity_loss.item()
 
-    running_critic_loss /= len(valid_dataloader)
-    running_gen_loss /= len(valid_dataloader)
-    running_identity_loss /= len(valid_dataloader)
+        running_critic_loss /= len(valid_dataloader)
+        running_gen_loss /= len(valid_dataloader)
+        running_identity_loss /= len(valid_dataloader)
 
-    validation_logger.info(f"Gen Critic Loss: {running_gen_loss} "
-                           f"Gen Ident Loss: {running_identity_loss} "
-                           f"Critic Loss: {running_critic_loss} ")
+        validation_logger.info(f"Gen Critic Loss: {running_gen_loss} "
+                               f"Gen Ident Loss: {running_identity_loss} "
+                               f"Critic Loss: {running_critic_loss} ")
