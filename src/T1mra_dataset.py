@@ -90,7 +90,7 @@ class T1w2MraDataset(Dataset):
         if scan_to_use is None:
             raise IndexError(f"Index {idx} out of range for dataset")
 
-        slice_index = scan_to_use.get("first_index") - idx
+        slice_index = idx - scan_to_use.get("first_index")
 
         return self._get_slices(scan_to_use, slice_index)
 
