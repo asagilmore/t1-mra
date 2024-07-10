@@ -7,7 +7,7 @@ import torchvision.transforms.v2 as v2
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
                                              'src')))
-from T1mra_dataset import T1w2MraDataset  # noqa: E402
+from T1mra_dataset import T1w2MraDataset, T1w2MraDataset_scans  # noqa: E402
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -19,6 +19,7 @@ def test_transform():
         v2.ToDtype(torch.float32),
         v2.Normalize(mean=[0.5], std=[0.5])
     ])
+
 
 @pytest.fixture(scope='module')
 def test_dataset(test_transform):
@@ -32,8 +33,7 @@ def test_dataset(test_transform):
 def matched_dataset(test_transform):
     return T1w2MraDataset(os.path.join(current_dir, 'test_data', 'T1W'),
                           os.path.join(current_dir, 'test_data', 'T1W'),
-                          test_transform,
-                          )
+                          test_transform)
 
 
 @pytest.fixture(scope='module')
@@ -69,6 +69,19 @@ def matched_dataset_3d_width_label(test_transform):
                           test_transform,
                           slice_width=5,
                           width_labels=True)
+
+@pytest.fixture(scope='module')
+def test_dataset_scans(test_transform):
+    return T1w2MraDataset_scans(os.path.join(current_dir, 'test_data', 'T1W'),
+                                os.path.join(current_dir, 'test_data', 'MRA'),
+                                test_transform)
+
+
+@pytest.fixture(scope='module')
+def test_dataset_scans_matched(test_transform):
+    return T1w2MraDataset_scans(os.path.join(current_dir, 'test_data', 'T1W'),
+                                os.path.join(current_dir, 'test_data', 'T1W'),
+                                test_transform)
 
 
 def test_dataset_len(test_dataset):
@@ -158,4 +171,25 @@ def test_matched_3d_width_label(matched_dataset_3d_width_label):
               len(matched_dataset_3d_width_label) - 1, 101]
     for i in indexs:
         mri, mra = matched_dataset_3d_width_label[i]
+        assert torch.allclose(mri, mra, atol=1e-6)
+
+
+def test_first_last_scans(test_dataset_scans):
+    assert test_dataset_scans[0]
+    assert test_dataset_scans[len(test_dataset_scans) - 1]
+
+    with pytest.raises(IndexError):
+        assert not test_dataset_scans[len(test_dataset_scans)]
+
+
+def test_shape_scans(test_dataset_scans):
+    for i in range(len(test_dataset_scans)):
+        mri, mra = test_dataset_scans[i]
+        assert mri.shape == mra.shape
+        assert mri.shape == (100, 512, 512)
+
+
+def test_matched_scans(test_dataset_scans_matched):
+    for i in range(len(test_dataset_scans_matched)):
+        mri, mra = test_dataset_scans_matched[i]
         assert torch.allclose(mri, mra, atol=1e-6)

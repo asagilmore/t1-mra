@@ -267,3 +267,18 @@ class T1w2MraDataset(Dataset):
             return sum(shape)
         else:
             return scan_data.shape[self.slice_axis]
+
+
+class T1w2MraDataset_scans(T1w2MraDataset):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __len__(self):
+        return len(self.scan_list)
+
+    def __getitem__(self, idx):
+        scan = self.scan_list[idx]
+        mri_scan = scan.get("mri")
+        mra_scan = scan.get("mra")
+        mri_scan, mra_scan = self.transform(mri_scan, mra_scan)
+        return mri_scan, mra_scan
