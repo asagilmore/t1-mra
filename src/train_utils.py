@@ -73,9 +73,13 @@ def tensorboard_write(writer, device, train_loss, val_loss, epoch,
 
 
 def grid_from_tensor(image_tensor, nrow=5):
+    # handle 3d slices
+    if image_tensor.shape[1] != 1:
+        middle_slice_idx = image_tensor.shape[2] // 2
+        image_tensor = image_tensor[:, :, middle_slice_idx, :, :]
+
     image_grid = torchvision.utils.make_grid(image_tensor.cpu(), nrow=nrow)
     min_val = torch.min(image_grid)
     image_grid = (image_grid - min_val) / (torch.max(image_grid) - min_val)
 
     return image_grid
-
