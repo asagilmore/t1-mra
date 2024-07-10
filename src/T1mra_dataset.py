@@ -35,16 +35,28 @@ class T1w2MraDataset(Dataset):
         'largest' - resample all images to the largest shape
         'smallest' - resample all images to the smallest shape
         tuple - resample all images to the shape specified in the tuple
+    slice_width : int, optional
+        Number of slices to take on either side of the slice_axis. Default is 1
+        Must be an odd number.
+    width_labels : bool, optional
+        If True, the labels will be the same width as the input images.
+        Default is False, which will return the center slice as the label.
+        Ignored if slice_width is 1.
     '''
     def __init__(self, mri_dir, mra_dir, transform, slice_axis=2,
                  split_char="-", preload_dtype=np.float16,
-                 scan_size='most'):
+                 scan_size='most', slice_width=1, width_labels=False):
         self.mri_dir = mri_dir
         self.mra_dir = mra_dir
         self.slice_axis = slice_axis
         self.transform = transform
         self.split_char = split_char
         self.preload_dtype = preload_dtype
+        if not slice_width % 2 == 1:
+            raise ValueError("slice_width must be an odd number")
+        else:
+            self.slice_width = slice_width
+        self.width_labels = width_labels
 
         # TODO: use this to select a good shape size and resample
         # images to the same size
@@ -78,7 +90,7 @@ class T1w2MraDataset(Dataset):
         if scan_to_use is None:
             raise IndexError(f"Index {idx} out of range for dataset")
 
-        slice_index = scan_to_use.get("first_index") - idx
+        slice_index = idx - scan_to_use.get("first_index")
 
         return self._get_slices(scan_to_use, slice_index)
 
@@ -87,15 +99,36 @@ class T1w2MraDataset(Dataset):
         mri_scan = scan_object.get("mri")
         mra_scan = scan_object.get("mra")
 
+        # because first and last indexs are set to not include padding
+        # we need to add the padding back to the index
+        if self.slice_width == 1:
+            offset = 0
+        else:
+            offset = self.slice_width // 2
+        slice_idx += offset
+        start_idx = slice_idx - offset
+        # end_idx is exclusive so add 1
+        end_idx = slice_idx + offset + 1
+
         if self.slice_axis == 0:
-            mri_slice = mri_scan[slice_idx, :, :]
-            mra_slice = mra_scan[slice_idx, :, :]
+            mri_slice = mri_scan[start_idx:end_idx, :, :]
+            if self.width_labels:
+                mra_slice = mra_scan[start_idx:end_idx, :, :]
+            else:
+                mra_slice = mra_scan[slice_idx, :, :]
+            mra_slice = mra_scan[start_idx:end_idx, :, :]
         elif self.slice_axis == 1:
-            mri_slice = mri_scan[:, slice_idx, :]
-            mra_slice = mra_scan[:, slice_idx, :]
+            mri_slice = mri_scan[:, start_idx:end_idx, :]
+            if self.width_labels:
+                mra_slice = mra_scan[:, start_idx:end_idx, :]
+            else:
+                mra_slice = mra_scan[:, slice_idx, :]
         elif self.slice_axis == 2:
-            mri_slice = mri_scan[:, :, slice_idx]
-            mra_slice = mra_scan[:, :, slice_idx]
+            mri_slice = mri_scan[:, :, start_idx:end_idx]
+            if self.width_labels:
+                mra_slice = mra_scan[:, :, start_idx:end_idx]
+            else:
+                mra_slice = mra_scan[:, :, slice_idx]
 
         mri_slice, mra_slice = self.transform(mri_slice, mra_slice)
 
@@ -200,9 +233,15 @@ class T1w2MraDataset(Dataset):
         # now we count up the slices and add the first and last index
         scan_list = []
         slices = 0
+        # padding to save on either side for slice width
+        if self.slice_width == 1:
+            padding = 0
+        else:
+            padding = self.slice_width // 2
         for i, result in enumerate(result_list):
             first_index = slices
-            slices += result.get('slices')
+            slices += result.get('slices') - (padding*2)
+            # add padding
             last_index = slices - 1
             scan_list.append({'mri': result.get('mri'),
                               'mra': result.get('mra'),

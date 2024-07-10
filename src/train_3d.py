@@ -101,7 +101,7 @@ if __name__ == "__main__":
     print(f"Current memory usage: {current_memory / (1024**3)} GB")
 
     # def model
-    model = UNet(1, 1)
+    model = UNet(5, 1)
 
     if args.force_single_gpus:
         gpu_count = 1
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     # def optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
-                                                     factor=0.5, patience=10)
+                                                     factor=0.5, patience=5)
     num_epochs = args.num_epochs
 
     # load checkpoint if exists
