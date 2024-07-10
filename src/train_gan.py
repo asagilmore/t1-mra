@@ -1,6 +1,7 @@
 import argparse
 import os
 import logging
+from itertools import cycle
 
 from torch.utils.data import DataLoader
 import torchvision.transforms.v2 as v2
@@ -15,6 +16,65 @@ from Critic import Critic, gradient_penalty
 from UNet import UNet
 from train_utils import RandomRotation90
 
+
+def train_critic(generator_model, critic_model,
+                 critic_optimizer, critic_transform,
+                 image, mask):
+
+    generator_model.eval()
+    critic_model.train()
+    real_inputs = image.to(device)
+    real_masks = mask.to(device)
+
+    fake_masks = generator_model(real_inputs)
+    fake_masks = critic_transform(fake_masks)
+
+    real_concat = torch.cat([real_inputs, real_masks], dim=1)
+    fake_concat = torch.cat([real_inputs, fake_masks], dim=1)
+
+    real_validity = critic_model(real_concat)
+    fake_validity = critic_model(fake_concat)
+
+    critic_gp = gradient_penalty(critic_model, real_concat,
+                                 fake_concat)
+
+    critic_gp = lambda_gp * critic_gp
+    critic_loss = -torch.mean(real_validity) + torch.mean(
+                fake_validity) + critic_gp
+
+    critic_optimizer.zero_grad()
+    critic_loss.backward()
+    critic_optimizer.step()
+
+    return critic_loss.item()
+
+
+def train_generator(generator_model, critic_model,
+                    generator_optimizer, identity_weight,
+                    perceptual_loss,
+                    image, mask):
+
+    generator_model.train()
+    critic_model.eval()
+
+    real_inputs = image.to(device)
+    real_masks = mask.to(device)
+
+    gen_optimizer.zero_grad()
+    fake_masks = generator_model(real_inputs)
+    fake_concat = torch.cat([real_inputs, fake_masks], dim=1)
+    critic_validity = critic_model(fake_concat)
+    gen_critic_loss = -torch.mean(critic_validity)
+
+    second_output = generator_model(fake_masks)
+    identity_loss = perceptual_loss.get_loss(second_output, real_masks)
+    gen_loss = gen_critic_loss + (identity_weight * identity_loss)
+    gen_loss.backward()
+    gen_optimizer.step()
+
+    return gen_loss.item(), identity_loss.item()
+
+
 if __name__ == "__main__":
 
     writer = SummaryWriter()
@@ -28,7 +88,9 @@ if __name__ == "__main__":
                         "size for training")
     parser.add_argument("--num_epochs", type=int, default=500, help="Number "
                         "of epochs")
-    parser.add_argument("--preload_dtype", type=str, default="float32",)
+    parser.add_argument("--preload_dtype", type=str, default="float32")
+    parser.add_argument("--n_critic", type=int, default=5, help="Number of "
+                        "critic updates per generator update")
     args = parser.parse_args()
 
     train_logger = logging.getLogger('train_logger')
@@ -50,6 +112,7 @@ if __name__ == "__main__":
 
     # Example usage
     train_logger.info("Started Logging train")
+    train_logger.info(f"Args: {vars(args)}")
     validation_logger.info("Started Logging validation")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -86,9 +149,9 @@ if __name__ == "__main__":
     train_gen_dataloader = DataLoader(train_dataset,
                                       batch_size=args.batch_size,
                                       shuffle=True)
-    train_critic_dataloader = DataLoader(train_dataset,
-                                         batch_size=args.batch_size,
-                                         shuffle=True)
+    train_critic_dataloader = cycle(DataLoader(train_dataset,
+                                    batch_size=args.batch_size,
+                                    shuffle=True))
     valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size,
                                   shuffle=False)
 
@@ -103,7 +166,7 @@ if __name__ == "__main__":
 
     # identity loss weight
     identity_weight = 0.1
-
+    critic_updates = args.n_critic
     gen_optimizer = optim.Adam(generator_model.parameters(), lr=learning_rate,
                                betas=(b1, b2))
     critic_optimizer = optim.Adam(critic_model.parameters(), lr=learning_rate,
@@ -122,62 +185,33 @@ if __name__ == "__main__":
 
     for epoch in range(args.num_epochs):
 
-        for gen_batch, critic_batch in zip(train_gen_dataloader,
-                                           train_critic_dataloader):
+        for gen_image, gen_mask in train_gen_dataloader:
             # Train critic
-            generator_model.eval()
-            critic_model.train()
-            real_inputs, real_masks = gen_batch
-            real_inputs = real_inputs.to(device)
-            real_masks = real_masks.to(device)
+            running_critic_loss = 0.0
+            for i in range(critic_updates):
+                image, mask = next(train_critic_dataloader)
+                critic_loss = train_critic(generator_model, critic_model,
+                                           critic_optimizer, critic_transform,
+                                           image, mask)
+                running_critic_loss += critic_loss
 
-            fake_masks = generator_model(real_inputs)
-            fake_masks = critic_transform(fake_masks)
-
-            real_concat = torch.cat([real_inputs, real_masks], dim=1)
-            fake_concat = torch.cat([real_inputs, fake_masks], dim=1)
-
-            real_validity = critic_model(real_concat)
-            fake_validity = critic_model(fake_concat)
-
-            critic_gp = gradient_penalty(critic_model, real_concat,
-                                         fake_concat)
-
-            critic_gp = lambda_gp * critic_gp
-            critic_loss = -torch.mean(real_validity) + torch.mean(
-                        fake_validity) + critic_gp
-
-            critic_optimizer.zero_grad()
-            critic_loss.backward()
-            critic_optimizer.step()
+            running_critic_loss /= critic_updates
 
             # Train generator
-            generator_model.train()
-            critic_model.eval()
+            gen, ident = train_generator(generator_model, critic_model,
+                                         gen_optimizer, identity_weight,
+                                         perceptual_loss, gen_image,
+                                         gen_mask)
+            gen_loss = gen
+            identity_loss = ident
 
-            real_inputs, real_masks = critic_batch
-            real_inputs = real_inputs.to(device)
-            real_masks = real_masks.to(device)
+            print(f"Epoch {epoch} Gen Loss: {gen_loss} Critic Loss: "
+                  f"{critic_loss} Identity Loss: "
+                  f"{identity_loss}")
 
-            gen_optimizer.zero_grad()
-            fake_masks = generator_model(real_inputs)
-            fake_concat = torch.cat([real_inputs, fake_masks], dim=1)
-            critic_validity = critic_model(fake_concat)
-            gen_critic_loss = -torch.mean(critic_validity)
-
-            second_output = generator_model(fake_masks)
-            identity_loss = perceptual_loss.get_loss(second_output, real_masks)
-            gen_loss = gen_critic_loss + (identity_weight * identity_loss)
-            gen_loss.backward()
-            gen_optimizer.step()
-
-            print(f"Epoch {epoch} Gen Loss: {gen_loss.item()} Critic Loss: "
-                  f"{critic_loss.item()} Identity Loss: "
-                  f"{identity_loss.item()}")
-
-            train_logger.info(f"Epoch {epoch} Gen Loss: {gen_loss.item()} "
-                              f"Critic Loss: {critic_loss.item()} "
-                              f"Identity Loss: {identity_loss.item()}")
+            train_logger.info(f"Epoch {epoch} Gen Loss: {gen_loss} "
+                              f"Critic Loss: {critic_loss} "
+                              f"Identity Loss: {identity_loss}")
 
         generator_model.eval()
         critic_model.eval()
@@ -193,6 +227,7 @@ if __name__ == "__main__":
         running_critic_loss = 0.0
         running_gen_loss = 0.0
         running_identity_loss = 0.0
+        running_perceptual_loss = 0.0
         for image, mask in valid_dataloader:
             image = image.to(device)
             mask = mask.to(device)
@@ -210,18 +245,21 @@ if __name__ == "__main__":
                 perceptual_loss = perceptual_loss.get_loss(fake_mask, mask)
 
                 second_output = generator_model(fake_mask)
-                gen_identity_loss = perceptual_loss.get_loss(second_output, mask)
+                gen_identity_loss = perceptual_loss.get_loss(second_output,
+                                                             mask)
 
                 gen_critic_loss = -torch.mean(fake_validity)
 
                 running_critic_loss += critic_loss.item()
                 running_gen_loss += gen_critic_loss.item()
                 running_identity_loss += gen_identity_loss.item()
+                running_perceptual_loss += perceptual_loss.item()
 
         running_critic_loss /= len(valid_dataloader)
         running_gen_loss /= len(valid_dataloader)
         running_identity_loss /= len(valid_dataloader)
 
         validation_logger.info(f"Gen Critic Loss: {running_gen_loss} "
+                               f"Perceptual Loss: {running_perceptual_loss} "
                                f"Gen Ident Loss: {running_identity_loss} "
                                f"Critic Loss: {running_critic_loss} ")
