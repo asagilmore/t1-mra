@@ -11,10 +11,10 @@ import torch.optim as optim
 from torch.nn import MSELoss
 from torch.utils.tensorboard import SummaryWriter
 
-from T1mra_dataset import T1w2MraDataset
-from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
+from T1mra_dataset import T1w2MraDataset_scans
+from PerceptualLoss_3d import PerceptualLoss_3d, VGG16FeatureExtractor
 from UNet import UNet
-from train_utils import train, validate, tensorboard_write, RandomRotation90
+from train_utils import train_scans, validate, tensorboard_write, RandomRotation90
 
 if __name__ == "__main__":
 
@@ -79,16 +79,16 @@ if __name__ == "__main__":
 
     # def datasets/dataloaders
     print(f'Loading datasets from {args.data_dir}')
-    train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
+    train_dataset = T1w2MraDataset_scans(os.path.join(args.data_dir, "train", "T1W"),
                                    os.path.join(args.data_dir, "train", "MRA"),
                                    transform=train_transform,
                                    preload_dtype=args.preload_dtype,
-                                   slice_width=5)
-    valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
+                                   slice_width=1)
+    valid_dataset = T1w2MraDataset_scans(os.path.join(args.data_dir, "valid", "T1W"),
                                    os.path.join(args.data_dir, "valid", "MRA"),
                                    transform=train_transform,
                                    preload_dtype=args.preload_dtype,
-                                   slice_width=5)
+                                   slice_width=1)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size,
                                   shuffle=True)
@@ -134,10 +134,10 @@ if __name__ == "__main__":
     print(f'Starting training for {num_epochs} epochs')
     # training loop
     for epoch in range(start_epoch, num_epochs):
-        train_loss = train(model, train_dataloader, perceptual_loss.get_loss,
+        train_loss = train_scans(model, train_dataloader, PerceptualLoss_3d.get_loss,
                            optimizer, device)
         val_loss = validate(model, valid_dataloader,
-                            perceptual_loss.get_loss, device)
+                            PerceptualLoss_3d.get_loss, device)
 
         scheduler.step(val_loss)
 

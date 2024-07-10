@@ -22,6 +22,70 @@ def train(model, loader, criterion, optimizer, device):
         running_loss += loss.item()
     return running_loss / len(loader)
 
+def train_scans(model, loader, criterion, optimizer, device):
+    model.train()
+    running_loss = 0.0
+    for scans, masks in loader:
+        output_scan = []
+        masks
+        slices = scans.to(device)
+        optimizer.zero_grad()
+        for i in len(scans.shape[1]):
+            slice = scans[:,i,:,:]
+            outputs = model(slice)
+            output_scan.append(outputs)
+        stacked_outputs = torch.stack(output_scan)
+        loss = criterion(output_scan, masks)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+        running_loss = running_loss / len(scans)
+
+    return running_loss / len(loader)
+
+'''
+for scan in loader:
+    output_volume
+    for slice in scan:
+        model_out = model(slice)
+        output_volume.concat(model_out)
+    
+    output_volume_FM = get_feature_map(output_volume)
+    mask_volume_FM = get_feature_map(mask_volume)
+
+    for index in range(output_volume_FM.shape[0]):
+        loss = criterion(output_volume_FM[index], mask_volume_FM[index])
+        loss.backward()
+    
+    optimizer.step()
+    running_loss += loss.item()
+
+    
+for scan in loader:
+    output_volume
+    for slice in scan:
+        model_out = model(slice)
+        output_volume.concat(model_out)
+    
+    output_volume_FM_axis1 = get_feature_map(output_volume)
+    mask_volume_FM_axis1 = get_feature_map(mask_volume)
+
+    for index in range(output_volume_FM.shape[0]):
+        loss_axis1 = criterion(output_volume_FM_axis1[index],
+        mask_volume_FM_axis1[index])
+        loss_axis2 = criterion(output_volume_FM_axis2[index],
+        mask_volume_FM_axis2[index])
+        loss_axis3 = criterion(output_volume_FM_axis3[index],
+        mask_volume_FM_axis3[index])
+
+        loss = loss_axis1 + loss_axis2 + loss_axis3
+        loss.backward()
+    
+    optimizer.step()
+    running_loss += loss.item()
+
+'''
+
 
 def validate(model, loader, criterion, device):
     model.eval()
