@@ -23,6 +23,92 @@ def train(model, loader, criterion, optimizer, device):
     return running_loss / len(loader)
 
 
+def train_scans(model, loader, criterion, optimizer, device):
+    model.train()
+    running_loss = 0.0
+    for inputs, masks in loader:
+        output_scan = []
+        inputs = inputs.to(device)
+        masks = masks.to(device)
+        optimizer.zero_grad()
+        for i in range(inputs.shape[1]):
+            scan_slice = inputs[:, i, :, :]
+            scan_slice = scan_slice.unsqueeze(1)
+            outputs = model(scan_slice)
+            output_scan.append(outputs)
+        stacked_outputs = torch.stack(output_scan)
+        loss = criterion(stacked_outputs, masks)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+        running_loss = running_loss / len(inputs)
+
+    return running_loss / len(loader)
+
+
+def validate(model, loader, criterion, device):
+    model.eval()
+    running_loss = 0.0
+    with torch.no_grad():
+        for inputs, masks in loader:
+            output_scan = []
+            inputs = inputs.to(device)
+            masks = masks.to(device)
+            for i in range(inputs.shape[1]):
+                scan_slice = inputs[:, i, :, :]
+                scan_slice = scan_slice.unsqueeze(1)
+                outputs = model(scan_slice)
+                output_scan.append(outputs)
+            stacked_outputs = torch.stack(output_scan)
+            loss = criterion(stacked_outputs, masks)
+            running_loss += loss.item()
+            running_loss = running_loss / len(inputs)
+
+    return running_loss / len(loader)
+'''
+for scan in loader:
+    output_volume
+    for slice in scan:
+        model_out = model(slice)
+        output_volume.concat(model_out)
+
+    output_volume_FM = get_feature_map(output_volume)
+    mask_volume_FM = get_feature_map(mask_volume)
+
+    for index in range(output_volume_FM.shape[0]):
+        loss = criterion(output_volume_FM[index], mask_volume_FM[index])
+        loss.backward()
+
+    optimizer.step()
+    running_loss += loss.item()
+
+
+for scan in loader:
+    output_volume
+    for slice in scan:
+        model_out = model(slice)
+        output_volume.concat(model_out)
+
+    output_volume_FM_axis1 = get_feature_map(output_volume)
+    mask_volume_FM_axis1 = get_feature_map(mask_volume)
+
+    for index in range(output_volume_FM.shape[0]):
+        loss_axis1 = criterion(output_volume_FM_axis1[index],
+        mask_volume_FM_axis1[index])
+        loss_axis2 = criterion(output_volume_FM_axis2[index],
+        mask_volume_FM_axis2[index])
+        loss_axis3 = criterion(output_volume_FM_axis3[index],
+        mask_volume_FM_axis3[index])
+
+        loss = loss_axis1 + loss_axis2 + loss_axis3
+        loss.backward()
+
+    optimizer.step()
+    running_loss += loss.item()
+
+'''
+
+
 def validate(model, loader, criterion, device):
     model.eval()
     val_loss = 0.0
