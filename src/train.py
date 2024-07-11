@@ -79,12 +79,12 @@ if __name__ == "__main__":
 
     # def datasets/dataloaders
     print(f'Loading datasets from {args.data_dir}')
-    train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "T1W"),
-                                   os.path.join(args.data_dir, "train", "MRA"),
+    train_dataset = T1w2MraDataset(os.path.join(args.data_dir, "train", "t1"),
+                                   os.path.join(args.data_dir, "train", "t2"),
                                    transform=train_transform,
                                    preload_dtype=args.preload_dtype)
-    valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "T1W"),
-                                   os.path.join(args.data_dir, "valid", "MRA"),
+    valid_dataset = T1w2MraDataset(os.path.join(args.data_dir, "valid", "t1"),
+                                   os.path.join(args.data_dir, "valid", "t2"),
                                    transform=train_transform,
                                    preload_dtype=args.preload_dtype)
 
