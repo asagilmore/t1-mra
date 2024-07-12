@@ -32,9 +32,9 @@ class PerceptualLoss():
         return self.loss_criterion(out_features, target_features)
 
 
-class CombindLoss(nn.Module):
+class CombinedLoss(nn.Module):
     def __init__(self, criterion, FeatureExtractor, alpha=1.0, beta=1.0):
-        super(CombindLoss, self).__init__()
+        super(CombinedLoss, self).__init__()
         self.feature_extractor = FeatureExtractor
         self.criterion = criterion
         self.alpha = alpha
