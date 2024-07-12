@@ -12,7 +12,7 @@ from torch.nn import MSELoss
 from torch.utils.tensorboard import SummaryWriter
 
 from T1mra_dataset import T1w2MraDataset
-from PerceptualLoss import PerceptualLoss, VGG16FeatureExtractor
+from PerceptualLoss import CombinedLoss, VGG16FeatureExtractor
 from UNet import UNet
 from train_utils import train, validate, tensorboard_write, RandomRotation90
 
@@ -59,10 +59,11 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # setup perceptual loss
+    # setup combined perceptual loss
     feature_extractor = VGG16FeatureExtractor()
     feature_extractor.to(device)
-    perceptual_loss = PerceptualLoss(feature_extractor, MSELoss)
+    criterion = CombinedLoss(MSELoss(), feature_extractor, alpha=0.67,
+                             beta=0.33)
 
     # def transforms
     train_transform = v2.Compose([
@@ -132,10 +133,10 @@ if __name__ == "__main__":
     print(f'Starting training for {num_epochs} epochs')
     # training loop
     for epoch in range(start_epoch, num_epochs):
-        train_loss = train(model, train_dataloader, perceptual_loss.get_loss,
+        train_loss = train(model, train_dataloader, criterion,
                            optimizer, device)
         val_loss = validate(model, valid_dataloader,
-                            perceptual_loss.get_loss, device)
+                            criterion, device)
 
         scheduler.step(val_loss)
 
