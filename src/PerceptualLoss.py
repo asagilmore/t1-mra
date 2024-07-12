@@ -30,3 +30,26 @@ class PerceptualLoss():
         target_features = self.feature_extractor(rgb_target)
 
         return self.loss_criterion(out_features, target_features)
+
+
+class CombindLoss(nn.Module):
+    def __init__(self, criterion, FeatureExtractor, alpha=1.0, beta=1.0):
+        super(CombindLoss, self).__init__()
+        self.feature_extractor = FeatureExtractor
+        self.criterion = criterion
+        self.alpha = alpha
+        self.beta = beta
+
+    def forward(self, output, target):
+
+        criterion_loss = self.criterion(output, target)
+
+        rgb_output = output.expand(-1, 3, -1, -1)
+        rgb_target = target.expand(-1, 3, -1, -1)
+        output_features = self.feature_extractor(rgb_output)
+        target_features = self.feature_extractor(rgb_target)
+
+        perceptual_loss = self.criterion(output_features, target_features)
+
+        total_loss = self.alpha * criterion_loss + self.beta * perceptual_loss
+        return total_loss
