@@ -1,5 +1,7 @@
 import torch.nn as nn
 from torchvision.models import vgg16, VGG16_Weights
+import torchvision.transforms.v2 as v2
+import torch
 
 
 class VGG16FeatureExtractor(nn.Module):
@@ -39,8 +41,15 @@ class CombinedLoss(nn.Module):
         self.criterion = criterion
         self.alpha = alpha
         self.beta = beta
+        self.transform = v2.Compose([
+            v2.ToDtype(torch.float32),
+            v2.Normalize(mean=[0.5], std=[0.5])
+        ])
 
     def forward(self, output, target):
+
+        output = self.transform(output)
+        target = self.transform(target)
 
         criterion_loss = self.criterion(output, target)
 
