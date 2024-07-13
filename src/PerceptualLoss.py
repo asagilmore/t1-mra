@@ -1,5 +1,7 @@
 import torch.nn as nn
 from torchvision.models import vgg16, VGG16_Weights
+import torchvision.transforms.v2 as v2
+import torch
 
 
 class VGG16FeatureExtractor(nn.Module):
@@ -30,3 +32,33 @@ class PerceptualLoss():
         target_features = self.feature_extractor(rgb_target)
 
         return self.loss_criterion(out_features, target_features)
+
+
+class CombinedLoss(nn.Module):
+    def __init__(self, criterion, FeatureExtractor, alpha=1.0, beta=1.0):
+        super(CombinedLoss, self).__init__()
+        self.feature_extractor = FeatureExtractor
+        self.criterion = criterion
+        self.alpha = alpha
+        self.beta = beta
+        self.transform = v2.Compose([
+            v2.ToDtype(torch.float32),
+            v2.Normalize(mean=[0.5], std=[0.5])
+        ])
+
+    def forward(self, output, target):
+
+        output = self.transform(output)
+        target = self.transform(target)
+
+        criterion_loss = self.criterion(output, target)
+
+        rgb_output = output.expand(-1, 3, -1, -1)
+        rgb_target = target.expand(-1, 3, -1, -1)
+        output_features = self.feature_extractor(rgb_output)
+        target_features = self.feature_extractor(rgb_target)
+
+        perceptual_loss = self.criterion(output_features, target_features)
+
+        total_loss = self.alpha * criterion_loss + self.beta * perceptual_loss
+        return total_loss
