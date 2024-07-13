@@ -62,8 +62,8 @@ if __name__ == "__main__":
     # setup combined perceptual loss
     feature_extractor = VGG16FeatureExtractor()
     feature_extractor.to(device)
-    criterion = CombinedLoss(MSELoss(), feature_extractor, alpha=0.67,
-                             beta=0.33)
+    criterion = CombinedLoss(MSELoss(), feature_extractor, alpha=0.9,
+                             beta=0.1)
 
     # def transforms
     train_transform = v2.Compose([
